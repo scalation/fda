@@ -1,0 +1,11 @@
+
+// Ortho plugin for spell checking of comments
+// https://github.com/henrikengstrom/sbt-ortho
+
+resolvers += Resolver.url(
+  "bintray-sbt-plugin-releases",
+    url("http://dl.bintray.com/h3nk3/sbt-plugins/"))(
+      Resolver.ivyStylePatterns)
+
+addSbtPlugin("org.h3nk3" % "sbt-ortho" % "0.1.1")
+
