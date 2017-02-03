@@ -9,7 +9,7 @@
 package apps.analytics.fda
 
 import scala.io.Source.fromFile
-import scalation.analytics.{BASE_DIR, KMeansClustering}
+import scalation.analytics.{BASE_DIR, KMeansClustering, TightClustering}
 import scalation.analytics.fda.Smoothing_F
 import scalation.linalgebra.{MatrixD, VectorD}
 import scalation.util.banner
@@ -59,10 +59,17 @@ object GeneIsoform extends App
     println(fits)
    
     // CLUSTER USIGN K-MEANS
-    banner ("Clustering with K-Means (k=5)")
-    val k  = 5 // # clusters (will use gap estimate later)
-    val cl = new KMeansClustering (fits, k)
-    println ("--- final cluster = " + cl.cluster ().deep)
+    //banner ("Clustering with K-Means (k=5)")
+    val k  = 10 // # clusters (will use gap estimate later)
+    //val cl = new KMeansClustering (fits, k)
+    //println ("--- final cluster = " + cl.cluster ().deep)
+
+    // CLUSTER USIGN TIGHT K-MEANS
+    banner ("Clustering with Tight K-Means (k=5)")
+    val tcl = new TightClustering (fits, k)
+    tcl.cluster ()
+    //println ("--- final cluster = " + tcl.cluster ().deep)
+
 
 } // GeneIsoform
 

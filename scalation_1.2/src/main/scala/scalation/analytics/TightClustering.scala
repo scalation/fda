@@ -29,24 +29,26 @@ class TightClustering (x: MatrixD, k: Int)
 {
     if (k >= x.dim1) flaw ("constructor", "k must be less than the number of vectors")
 
-    private val DEBUG    = true                        // debug flag
-    private val MAX_ITER = 200                         // the maximum number of iterations
-    private val α        = 0.4                         // constant close to zero
-    private val B        = 5                           // the number of random k-means samples
-    private val cent     = new MatrixD (k, x.dim2)     // the k centroids of tight clusters
-    private val comember = new MatrixD (x.dim1, k)     // comembership matrix for k tight clusters
+    private val DEBUG    = false                        // debug flag
+    private val MAX_ITER = 200                          // the maximum number of iterations
+    private val α        = 0.5                          // constant close to zero
+    private val B        = 10                           // the number of random k-means samples
+    private val cent     = new MatrixD (k, x.dim2)      // the k centroids of tight clusters
+    // private val comember = new MatrixD (x.dim1, x.dim1) // comembership matrix for k tight clusters
 
     private def meanComember (): MatrixD =
     {
-        val sco = new MatrixD (x.dim1, k)              // sum/total comembership matrix
+        val sco = new MatrixD (x.dim1, x.dim1)          // sum/total comembership matrix
         for (b <- 0 until B) {
-            val kmeans = new KMeansClustering (x, k, b)
-            val clustr = kmeans.cluster ()             // randomly cluster
-            for (i <- 0 until clustr.length) {         // update sums
-                sco(i, clustr(i)) += 1.0
+            val seed   = (System.currentTimeMillis() % 999).toInt
+            //            val kmeans = new KMeansClustering (x, k, b)
+            val kmeans = new KMeansClustering (x, k, seed)
+            val clustr = kmeans.cluster ()              // randomly cluster
+            for (i <- sco.range1; j <- sco.range2) {    // update sums
+                if (clustr(i) == clustr(j)) sco(i, j) += 1.0 
             } // for
         } // for
-        sco / B                                        // return average comembership matrix
+        sco / B                                         // return average comembership matrix
     } // meanComember
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -60,11 +62,12 @@ class TightClustering (x: MatrixD, k: Int)
 
         for (i <- mco.range1) {
             for (j <- mco.range2) {
-                if (mco(i, j) >= 1.0 - α) println (s"mco($i, $j) >= 1.0 - α")
+                if (mco(i, j) >= 1.0 - α) println (s"[ mco($i, $j) = ${mco(i, j)} ] >= [ 1.0 - α = ${1.0 - α} ]")
             } // for
         } // for
 
-        comember                                       // return the cluster assignment vector
+        // comember                                       // return the cluster assignment vector
+        null
     } // cluster
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
