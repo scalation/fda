@@ -6,7 +6,8 @@
  *  @see     LICENSE (MIT style license file).
  *
  *  @see en.wikipedia.org/wiki/B-spline
- *  @see cran.r-project.org/web/packages/crs/vignettes/spline_primer.pdf
+ *  @see cran.r-project.org/web/packages/crs/vignettes/spline_primer.pdf*
+ *  @see http://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node17.html
  */
 
 package scalation.analytics.fda
@@ -14,6 +15,7 @@ package scalation.analytics.fda
 import scalation.linalgebra.VectorD
 import scalation.math.double_exp
 import scalation.util.Error
+import scalation.math.ExtremeD.TOL
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `B_Spline` class provides B-Spline basis functions for various orders 'm',
@@ -31,8 +33,12 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
 {
     private val DEBUG = true                                 // debug flag
     private val l     = ττ.dim - 1                           // the number of intervals
-    private val τ     = VectorD.fill (mMax)(ττ(0)) ++ ττ ++ VectorD.fill (mMax)(ττ(l))   // augment to accomodate knots
+    ττ(0) -= 0.01
+    ττ(ττ.dim-1) += 0.01
+    private val τ     = VectorD.fill (mMax-1)(ττ(0)) ++ ττ ++ VectorD.fill (mMax-1)(ττ(l))   // augment to accomodate knots
 
+    def range(m:Int) = 0 to l+m-2
+    //private val τ     = VectorD.fill (mMax-1)(ττ(0))++ττ ++VectorD.fill (mMax-1)(ττ(l))++VectorD.fill (1)(ττ(l)*10)
     if (mMax < 1 || mMax > 10) flaw ("constructor", "B_Spline order restricted to 1 thru 10")
     if (DEBUG) println ("τ = " + τ)
 
@@ -105,15 +111,29 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
     def bb (m: Int)(j: Int, t: Double): Double =
     {
         if (mMax < m) flaw ("bb", s"mMax = $mMax can't be less than m = $m")
+        val EPS = 0.001
+        val tt = t - EPS
         val k = j
-        if (m == 1) return bb1 (k, t)
+        if (m == 1) return bb1 (k, tt)
         val km = k + m
-        val d1 = τ(km-1) - τ(k)
-        val d2 = τ(km) - τ(k+1)
-        val a  = if (d1 =~ 0.0) 0.0 else ((t  - τ(k)) / d1) * bb (m-1)(k, t)
-        val b  = if (d2 =~ 0.0) 0.0 else ((τ(km) - t) / d2) * bb (m-1)(k+1, t)
+        val d1 = τ(km-1) - τ(k) + EPS
+        val d2 = τ(km) - τ(k+1) + EPS
+        //val a  = if (d1 =~ 0.0) 0.0 else ((tt  - τ(k)) / d1) * bb (m-1)(k, t)
+        //val b  = if (d2 =~ 0.0) 0.0 else ((τ(km) - tt) / d2) * bb (m-1)(k+1, t)
+        val a  = ((tt  - τ(k)) / d1) * bb (m-1)(k, t)
+        val b  = ((τ(km) - tt) / d2) * bb (m-1)(k+1, t)
         a + b
     } // bb
+
+    /*this wil be valid to ττ.dim
+     */
+//def bs(m:Int)(j:Int, t:Double): Double=bb(m)(j+mMax+1-m,t)
+def bs(m:Int)(j:Int, t:Double): Double=bb(m)(j+mMax-m,t)
+
+
+
+
+
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Order one 'm = 1' B-Spline basis functions (flat functions).
@@ -193,6 +213,8 @@ object B_SplineTest extends App
     } // for
     new Plot (t, y7, y8, "B-Spline order " + 4)
 
+    println("tes"+τ(1))
+
 } // B_SplineTest object
 
 
@@ -239,26 +261,30 @@ object B_SplineTest2 extends App
 object B_SplineTest3 extends App
 {
     import scalation.linalgebra.MatrixD
-    import scalation.plot.PlotM
+    import scalation.plot.{PlotM,Plot}
 
     val mM = 4                                               // maximum order to test
-    val τ  = VectorD (0.0, 20.0, 40.0, 60.0, 80.0, 100.0)    // knot time-points
+    val τ  = VectorD (0.0, 25.0, 50.0, 75.0, 100.0)    // knot time-points
     val bs = new B_Spline (τ, mM)                            // B-Spline generator
-    val n  = 100                                             // number of time-points for plotting
+    val n  = 101                                             // number of time-points for plotting
     val t  = VectorD.range (0, n)                            // time-points for plotting
     val k  = 0                                               // index for initial B-Spline
 
-    for (m <- 1 to mM) {
+
+    for (m <- mM to mM) {
 
         //---------------------------------------------------------------------
         // order m B-Splines (polynomial functions)
 
       val y = new MatrixD (τ.dim + mM, n)                    // matrix to hold initial B-Splines
 
-      for (i <- 0 until n; j <- 0 until y.dim1) {
-          y(j, i) = bs.bb (m)(k+j, i)
+      for (i <- 0 until n; j <- 0 to bs.range(m).last) {
+          y(j, i) = bs.bs (m)(j, i)
       } // for
-      new PlotM (t, y, null, "B-Spline order " + m)
+       // for (i <- 0 until y.dim1)
+        new Plot(t, y(bs.range(m).last))
+        //println(y(bs.range(m).last))
+     new PlotM (t, y, null, "B-Spline order " + m)
 
    } // for
 
