@@ -43,7 +43,7 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
     if (DEBUG) println ("τ = " + τ)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Valid range for use with the `bs` function.
+    /** Range of "usable" splines when using the `bs` function.
      *  @param m  the order of the spline
      */
     def range (m: Int) = 0 to l+m-2    
