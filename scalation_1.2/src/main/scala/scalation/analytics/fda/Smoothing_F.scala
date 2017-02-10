@@ -71,7 +71,7 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     def train (): VectoD =
     {
         form_phi ()
-        new Plot(t,phi.col(bs.range(ord).last-1))
+        //new Plot(t,phi.col(bs.range(ord).last-1))
         import scalation.minima.GoldenSectionLS                         //Using GoldenSectionSearch to find minimal GCV in a range of Lambda
 
         /** f is the function gcv = f (Lambda) to put as a parameter of GoldenSectionLS

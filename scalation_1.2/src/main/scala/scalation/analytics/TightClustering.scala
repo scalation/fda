@@ -11,7 +11,7 @@ package scalation.analytics
 import scala.collection.mutable.Set
 import scala.util.control.Breaks.{breakable, break}
 
-import scalation.linalgebra.{MatrixD, VectorD}
+import scalation.linalgebra.{MatrixD, SparseMatrixD, VectorD}
 import scalation.random.{Randi, Uniform}
 import scalation.util.{banner, Error}
 
@@ -31,14 +31,14 @@ class TightClustering (x: MatrixD, k: Int)
 
     private val DEBUG    = false                        // debug flag
     private val MAX_ITER = 200                          // the maximum number of iterations
-    private val α        = 0.5                          // constant close to zero
+    private val α        = 0.01                         // constant close to zero
     private val B        = 10                           // the number of random k-means samples
     private val cent     = new MatrixD (k, x.dim2)      // the k centroids of tight clusters
     // private val comember = new MatrixD (x.dim1, x.dim1) // comembership matrix for k tight clusters
 
-    private def meanComember (): MatrixD =
+    private def meanComember (): SparseMatrixD =
     {
-        val sco = new MatrixD (x.dim1, x.dim1)          // sum/total comembership matrix
+        val sco = new SparseMatrixD (x.dim1, x.dim1)          // sum/total comembership matrix
         for (b <- 0 until B) {
             val seed   = (System.currentTimeMillis() % 999).toInt
             //            val kmeans = new KMeansClustering (x, k, b)
@@ -48,7 +48,8 @@ class TightClustering (x: MatrixD, k: Int)
                 if (clustr(i) == clustr(j)) sco(i, j) += 1.0 
             } // for
         } // for
-        sco / B                                         // return average comembership matrix
+        sco /= B                                         // return average comembership matrix
+        sco
     } // meanComember
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
