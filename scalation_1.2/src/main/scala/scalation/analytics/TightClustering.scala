@@ -17,57 +17,74 @@ import scalation.util.{banner, Error}
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `TightClustering` class uses k-means to cluster points into tight 
- *  clusters.
+ *  and stable clusters without forcing all points into clusters via the
+ *  Tseng-Wong algorithm.
  *  @see http://doi.wiley.com/10.1111/j.0006-341X.2005.031032.x
- *  @param x        the vectors/points to be clustered stored as rows of a matrix
- *  @param k        the number of clusters to make
- *  @param s        the random number stream (to vary the clusters made)
- *  @param primary  true indicates use the primary technique for initiating the clustering
+ *  @param x  the vectors/points to be clustered stored as rows of a matrix
+ *  @param k  the number of clusters to make
+ *  @param α  a constant close to zero (default = 0.0)
+ *  @param β  a constant close to one (default = 0.7)
+ *  @param B  the number of random k-means samples (default = 10)
  */
-class TightClustering (x: MatrixD, k: Int)
+class TightClustering (x: MatrixD, k: Int, α: Double = 0.0, β: Double = 0.7, B: Int = 10)
       extends Error
 {
     if (k >= x.dim1) flaw ("constructor", "k must be less than the number of vectors")
+    if (α < 0)       flaw ("constructor", "α must be greater than or equal to 0")
+    if (β > 1)       flaw ("constructor", "β must be less than or equal to 1")
 
-    private val DEBUG    = false                        // debug flag
+    private val DEBUG    = true                         // debug flag
     private val MAX_ITER = 200                          // the maximum number of iterations
-    private val α        = 0.01                         // constant close to zero
-    private val B        = 10                           // the number of random k-means samples
     private val cent     = new MatrixD (k, x.dim2)      // the k centroids of tight clusters
-    // private val comember = new MatrixD (x.dim1, x.dim1) // comembership matrix for k tight clusters
 
+    if (DEBUG) {
+        banner (s"TightClustering(x, k=$k, α=$α, β=$β, B=$B)")
+        println (s"x.dim1 = ${x.dim1}")
+        println (s"x.dim2 = ${x.dim2}")
+    } // if
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the average or mean comembership matrix of `B`-many
+     *  independent random subsample clusterings via the K-Means clustering
+     *  algorithm.
+     */
     private def meanComember (): SparseMatrixD =
     {
-        val sco = new SparseMatrixD (x.dim1, x.dim1)          // sum/total comembership matrix
+        if (DEBUG) banner ("TightClustering: meanComember()")
+        val co = new SparseMatrixD (x.dim1, x.dim1)     // comembership matrix
         for (b <- 0 until B) {
-            val seed   = (System.currentTimeMillis() % 999).toInt
-            //            val kmeans = new KMeansClustering (x, k, b)
-            val kmeans = new KMeansClustering (x, k, seed)
+            val kmeans = new KMeansClustering (x, k, b) // k-means clusterer
             val clustr = kmeans.cluster ()              // randomly cluster
-            for (i <- sco.range1; j <- sco.range2) {    // update sums
-                if (clustr(i) == clustr(j)) sco(i, j) += 1.0 
+            for (i <- co.range1; j <- co.range2) {      // update comembership matrix
+                if (clustr(i) == clustr(j)) co(i, j) += 1.0 
             } // for
         } // for
-        sco /= B                                         // return average comembership matrix
-        sco
+        co /= B                                         // average comembership matrix
+        co
     } // meanComember
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Search for a set of points `V = {v1, ... , vm} ⊂ {1, ... ,n}` such that
+     *  `dbar(i, j) >= 1 − α`, for all `i`, `j` where `α` is a constant close
+     *  to 0. Order sets with this property by size to obtain candidates of 
+     *  tight clusters.
+     */
+    private def tightCandidates (dbar: SparseMatrixD): Unit = // @TODO change return type 
+    {
+        for (i <- dbar.range1) {
+            for (j <- dbar.range2) {
+                if (dbar(i, j) >= 1.0 - α) println (s"[ dbar($i, $j) = ${dbar(i, j)} ] >= [ 1.0 - α = ${1.0 - α} ]")
+            } // for
+        } // for
+    } // tightCandidates
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Iteratively compute tight clusters.
      */
     def cluster (): MatrixD =
     {
-        val mco = meanComember()
-        println ("average comembership matrix = ")
-        println (mco)
-
-        for (i <- mco.range1) {
-            for (j <- mco.range2) {
-                if (mco(i, j) >= 1.0 - α) println (s"[ mco($i, $j) = ${mco(i, j)} ] >= [ 1.0 - α = ${1.0 - α} ]")
-            } // for
-        } // for
-
-        // comember                                       // return the cluster assignment vector
+        val dbar = meanComember ()
+        val v    = tightCandidates (dbar)
         null
     } // cluster
 
@@ -111,8 +128,8 @@ object TightClusteringTest extends App
     println ("v = " + v)
     println ("----------------------------------------------------")
 
-    banner ("TightClustering for stream")
     val tcl = new TightClustering (v, 3)
     println ("--- final cluster = " + tcl.cluster () + "\n")
 
 } // TightClusteringTest object
+
