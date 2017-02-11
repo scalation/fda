@@ -9,6 +9,7 @@
 package scalation.analytics
 
 import scala.collection.mutable.Set
+import scala.math.abs
 import scala.util.control.Breaks.{breakable, break}
 
 import scalation.linalgebra.{MatrixD, SparseMatrixD, VectorD}
@@ -22,8 +23,8 @@ import scalation.util.{banner, Error}
  *  @see http://doi.wiley.com/10.1111/j.0006-341X.2005.031032.x
  *  @param x  the vectors/points to be clustered stored as rows of a matrix
  *  @param k  the number of clusters to make
- *  @param α  a constant close to zero (default = 0.0)
- *  @param β  a constant close to one (default = 0.7)
+ *  @param α  the tightness of clusters; a constant close to zero (default = 0.0)
+ *  @param β  the stableness of clusters; a constant close to one (default = 0.7)
  *  @param B  the number of random k-means samples (default = 10)
  */
 class TightClustering (x: MatrixD, k: Int, α: Double = 0.0, β: Double = 0.7, B: Int = 10)
@@ -62,6 +63,14 @@ class TightClustering (x: MatrixD, k: Int, α: Double = 0.0, β: Double = 0.7, B
         co /= B                                         // average comembership matrix
         co
     } // meanComember
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Similarity measure of two sets of points. `sim(u, v)=1` if and only if 
+     *  sets `u` and `v` are identical.
+     *  @param u  first set of points
+     *  @param v  second set of points
+     */    
+    private def sim (u: Set[VectorD], v: Set[VectorD]): Double = (u & v).size / (u | v).size
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Search for a set of points `V = {v1, ... , vm} ⊂ {1, ... ,n}` such that
