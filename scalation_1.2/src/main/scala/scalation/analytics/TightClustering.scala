@@ -9,7 +9,6 @@
 package scalation.analytics
 
 import scala.collection.mutable.Set
-import scala.math.abs
 import scala.util.control.Breaks.{breakable, break}
 
 import scalation.linalgebra.{MatrixD, SparseMatrixD, VectorD}
@@ -78,13 +77,17 @@ class TightClustering (x: MatrixD, k: Int, α: Double = 0.0, β: Double = 0.7, B
      *  to 0. Order sets with this property by size to obtain candidates of 
      *  tight clusters.
      */
-    private def tightCandidates (dbar: SparseMatrixD): Unit = // @TODO change return type 
+    private def tightCandidates (dbar: SparseMatrixD): Set[Set[VectorD]] = 
     {
+        val sets = Set.empty[Set[VectorD]]
+        println (dbar)
         for (i <- dbar.range1) {
-            for (j <- dbar.range2) {
-                if (dbar(i, j) >= 1.0 - α) println (s"[ dbar($i, $j) = ${dbar(i, j)} ] >= [ 1.0 - α = ${1.0 - α} ]")
-            } // for
+            val set = Set(x(i))
+            for (j <- dbar.range2) if (dbar(i, j) >= 1.0 - α) set += x(j)
+            sets += set
         } // for
+        if (DEBUG) for (set <- sets) println (s"tight cluster candidate = $set")
+        sets
     } // tightCandidates
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -137,7 +140,7 @@ object TightClusteringTest extends App
     println ("v = " + v)
     println ("----------------------------------------------------")
 
-    val tcl = new TightClustering (v, 3)
+    val tcl = new TightClustering (v, 3, 0.1)
     println ("--- final cluster = " + tcl.cluster () + "\n")
 
 } // TightClusteringTest object
