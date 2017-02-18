@@ -1,6 +1,6 @@
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** @author  John Miller, Michael Cotterell, Dong-Yu Yu
+/** @author  John Miller, Michael Cotterell, Hao Peng, Dong-Yu Yu
  *  @version 1.2
  *  @date    Thu Sep 22 21:45:58 EDT 2016
  *  @see     LICENSE (MIT style license file).
