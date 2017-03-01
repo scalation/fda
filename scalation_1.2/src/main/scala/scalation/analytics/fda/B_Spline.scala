@@ -131,7 +131,7 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
     def bb (m: Int)(j: Int, t: Double): Double =
     {
         if (mMax < m) flaw ("bb", s"mMax = $mMax can't be less than m = $m")
-        val EPS = 0.001
+        val EPS = TOL // 0.001
         val tt = t - EPS
         val k = j
         if (m == 1) return bb1 (k, tt)
@@ -168,8 +168,8 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
     {
         if (mMax < m) flaw ("d1bb", s"mMax = $mMax can't be less than m = $m")
         val EPS = 0.001
-        val tt = t - EPS
-        val k = j
+        val tt  = t - EPS
+        val k   = j
         if (m == 1) return 0.0
         val km = k + m
         val n1 = tt  - τ(k)
@@ -234,6 +234,30 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
      *  @param t  the time parameter
      */
     def apply (m: Int) (j: Int, t: Double): Double = bs (m)(j, t)
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Plot the B-spline basis functions and as well as their frist and second
+     *  derivatives. 
+     *  @param m  the order of the spline function (degree = order - 1)
+     *  @param t  the time parameter
+     */
+    def plot (m: Int = mMax) (t: VectorD)
+    {
+        import scalation.linalgebra.MatrixD
+        import scalation.plot.PlotM
+        val n   = t.dim
+        val d0y = new MatrixD (τ.dim + mMax, n)                    // matrix to hold initial B-Splines
+        val d1y = new MatrixD (τ.dim + mMax, n)
+        val d2y = new MatrixD (τ.dim + mMax, n)
+        for (i <- 0 until n; j <- range(m)) {
+            if (m > 0) d0y(j, i) =   bs (m)(j, t(i))
+            if (m > 1) d1y(j, i) = d1bs (m)(j, t(i))
+            if (m > 2) d2y(j, i) = d2bs (m)(j, t(i))
+        } // for
+        if (m > 0) new PlotM (t, d0y, null, "B-Spline order " + m)
+        if (m > 1) new PlotM (t, d1y, null, "First Derivative of B-Spline order " + m)
+        if (m > 2) new PlotM (t, d2y, null, "Second Derivative of B-Spline order " + m)
+    } // plot
 
 } // B_Spline class
 
@@ -407,4 +431,23 @@ object B_SplineTest4 extends App
     } // for
 
 } // B_SplineTest4 object
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `B_SplineTest5` object is used to test the `B_Spline` class.
+  *  It tests the B-Spline functions using the general recurrence.
+  *  > run-main scalation.analytics.fda.B_SplineTest5
+  */
+object B_SplineTest5 extends App
+{
+    import scalation.linalgebra.MatrixD
+    import scalation.plot.PlotM
+
+    val mM = 4                                               // maximum order to test
+    val n  = 100
+    val τ  = VectorD (0.0, 0.5 * n , n) / (0.5 * n)          // knot time-points
+    val bs = new B_Spline (τ, mM)                            // B-Spline generator
+    val t  = VectorD.range (0, n) / (0.5 * n)                // time-points for plotting
+    for (m <- 2 to mM) bs.plot(m)(t)
+
+} // B_SplineTest5 object
 
