@@ -6,7 +6,7 @@ lazy val commonSettings = Seq (
 
 name         := "scalation",
 organization := "scalation",
-version      := "1.3",
+version      := "1.3-SNAPSHOT",
 scalaVersion := "2.12.1",
 fork         := true,
 
@@ -35,6 +35,8 @@ lazy val root = (project in file("."))
     commonSettings,
     name := "scalation_modeling",
 //  unmanagedBase := baseDirectory.value / "../scalation_mathstat/target/scala-2.12/scalation_mathstat_2.12-1.3.jar",
+
+libraryDependencies += "scalation" %% "scalation_mathstat" % "1.3-SNAPSHOT",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scala Modules
