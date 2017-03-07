@@ -8,11 +8,12 @@
  *  @see     www.ebi.ac.uk/enright/docs/stijnmcl.pdf
  */
 
-package scalation.analytics
+package scalation.analytics.clusterer
 
 import scala.collection.mutable.ListMap
 import scala.util.control.Breaks.{breakable, break}
 
+import scalation.analytics.RandomGraph
 import scalation.linalgebra.{MatrixD, VectorD}
 //import scalation.linalgebra.SparseMatrixD
 import scalation.math.double_exp

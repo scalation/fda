@@ -11,7 +11,7 @@
 
 package scalation.analytics.fda
 
-import scalation.analytics.{Clusterer, KMeansClustering}
+import scalation.analytics.clusterer.{Clusterer, KMeansClustering}
 import scalation.linalgebra.{MatrixD, VectorD}
 import scalation.util.banner
 

@@ -6,7 +6,7 @@
  *  @see     LICENSE (MIT style license file).
  */
 
-package scalation.analytics
+package scalation.analytics.clusterer
 
 import scalation.linalgebra.VectorD
 
