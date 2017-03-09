@@ -11,7 +11,7 @@ package scalation.analytics.clusterer
 import scala.collection.mutable.{Set, ListBuffer}
 import scala.util.control.Breaks.{breakable, break}
 
-import scalation.linalgebra.{MatrixD, VectorD}
+import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 import scalation.util.Error
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -28,16 +28,22 @@ class HierClustering (x: MatrixD, k: Int = 2)
     private val cent   = new MatrixD (k, x.dim2)           // the k centroids of clusters
     private val clustr = Array.ofDim [Int] (x.dim1)        // assignment of vectors to clusters
     private val clust  = ListBuffer [Set [VectorD]] ()     // the list of clusters
+    private val sizes  = new VectorI (k)
 
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Compute a distance metric between vectors/points u and v.
-     *  @param u  the first vector/point
-     *  @param v  the second vector/point
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the centroids. Should only be called after `cluster ()`. 
      */
-    def distance (u: VectorD, v: VectorD): Double =
+    def centroids (): MatrixD = cent
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the sizes of the centroids. Should only be called after 
+     *  `cluster ()`. 
+     */
+    def csize (): VectorI =
     {
-        (u - v).normSq       // squared Euclidean norm used for efficiency, may use other norms
-    } // distance
+        for (i <- x.range1) sizes(clustr(i)) += 1
+        sizes
+    } // csize
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create initial clusters where each point forms its own cluster.

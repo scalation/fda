@@ -14,7 +14,7 @@ import scala.collection.mutable.ListMap
 import scala.util.control.Breaks.{breakable, break}
 
 import scalation.analytics.RandomGraph
-import scalation.linalgebra.{MatrixD, VectorD}
+import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 //import scalation.linalgebra.SparseMatrixD
 import scalation.math.double_exp
 import scalation.util.Error
@@ -41,6 +41,17 @@ class MarkovClustering (t: MatrixD, k: Int = 2, r: Double = 2.0)
     private val MAX_ITER = 200             // maximum number of iterations
     private val EPSILON  = 1E-7            // number close to zero
     private val DEBUG    = false           // debug flag
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the centroids. Should only be called after `cluster ()`. 
+     */
+    def centroids (): MatrixD = throw new UnsupportedOperationException ("not applicable")
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the sizes of the centroids. Should only be called after 
+     *  `cluster ()`. 
+     */
+    def csize (): VectorI = throw new UnsupportedOperationException ("not applicable")
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Add self-loops by setting the main diagonal to the weight parameter.

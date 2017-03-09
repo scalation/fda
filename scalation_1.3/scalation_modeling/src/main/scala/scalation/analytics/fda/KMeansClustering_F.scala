@@ -12,7 +12,7 @@
 package scalation.analytics.fda
 
 import scalation.analytics.clusterer.{Clusterer, KMeansClustering}
-import scalation.linalgebra.{MatrixD, VectorD}
+import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 import scalation.util.banner
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -30,6 +30,17 @@ class KMeansClustering_F (x: MatrixD, t: VectorD, τ: VectorD, k: Int, s: Int = 
     private val DEBUG = true                          // debug flag
     private val xs    = new MatrixD (x.dim1, x.dim2)  // smoothed version of data matrix
     private var cl: KMeansClustering = null           // holder to clustering algorithm
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the centroids. Should only be called after `cluster ()`. 
+     */
+    def centroids (): MatrixD = cl.centroids ()
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the sizes of the centroids. Should only be called after 
+     *  `cluster ()`. 
+     */
+    def csize (): VectorI = cl.csize ()
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create 'k' clusters consisting of points/rows that are closest to each other.

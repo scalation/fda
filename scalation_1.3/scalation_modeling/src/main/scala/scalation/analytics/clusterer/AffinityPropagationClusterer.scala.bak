@@ -1,0 +1,130 @@
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** @author  Michael Cotterell, John Miller
+ *  @version 1.3
+ *  @date    Wed Mar  8 11:19:09 2017
+ *  @see     LICENSE (MIT style license file).
+ */
+
+package scalation.analytics.clusterer
+
+import scala.util.control.Breaks.{breakable, break}
+import math.{min, max}
+
+import scalation.linalgebra.{MatrixD, VectorD, VectorI}
+import scalation.random.{Discrete, Randi, Uniform, RandomVecD, RandomVecI}
+import scalation.util.{banner, Error}
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `AffinityPropagationClusterer` class cluster several vectors/points 
+ *  using the Affinity Propagation clustering technique.  
+ *-----------------------------------------------------------------------------
+ *  @see https://en.wikipedia.org/wiki/Affinity_propagation
+ *-----------------------------------------------------------------------------
+ *  @param x        the vectors/points to be clustered stored as rows of a matrix
+ *  @param k        the number of clusters to make
+ *  @param s        the random number stream (to vary the clusters made)
+ */
+class AffinityPropagationClusterer (x: MatrixD, k: Int = -1, s: Int = 0)
+    extends Clusterer with Error
+{
+    protected val DEBUG    = true                                // debug flag
+    protected val n        = x.dim1
+    protected val r        = new MatrixD (n, n)                  // "responsibility" matrix
+    protected val a        = new MatrixD (n, n)                  // "availability" matrix
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute a distance metric (distance squared) between vectors/points 'u' and 'v'.
+     *  @param u  the first vector/point
+     *  @param v  the second vector/point
+     */
+    override def distance (u: VectorD, v: VectorD): Double =
+    {
+        (u - v).normSq       // squared Euclidean norm used for efficiency, may use other norms
+    } // distance
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the similarity between any two points, such that 
+     *  `sim(u, t) > s(u, v)` iff `u` is more similar to `t` than to `v`. Here
+     *  we will use the negative squared distance.
+     *  @param u  the first vector/point
+     *  @param v  the second vector/point
+     */
+    private def sim (u: VectorD, v: VectorD): Double =
+    {
+        -distance (u, v)
+    } // distance
+
+    private def updateR ()
+    {
+        for (i <- 0 until n; j <- 0 until n) {
+            var maxe = Double.NegativeInfinity
+            for (jp <- 0 until n if jp != j) {
+                val e = a(i, jp) + sim (x(i), x(jp))
+                if (e > maxe) maxe = e
+            } // for
+            r(i, j) = sim(x(i), x(j)) - maxe
+        } // for
+        if (DEBUG) println (s"updated r = $r")
+    } // updateR
+
+    private def updateA ()
+    {
+        //for (i <- a.range1; j <- a.range2 if i != j) a(i, j) = min (0, r(j, j) + )
+        for (i <- 0 until n; j <- 0 until n) {
+            if (i != j) {
+                var sum = 0.0
+                for (ip <- 0 until n if ip != i && ip !=j) sum += max (0, r(ip, j))
+                a(i, j) = min (0, r(j, j) + sum)
+            } else {
+                var sum = 0.0
+                for (ip <- 0 until n if ip !=j) sum += max (0, r(ip, j))
+                a(i, j) = sum
+            } // if
+        } // for
+        if (DEBUG) println (s"updated a = $a")
+    } // updateA
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Given a set of points/vectors, put them in clusters, returning the cluster
+     *  assignment vector.  A basic goal is to minimize the sum of the distances
+     *  between points within each cluster.
+     */
+    def cluster (): Array [Int] =
+    {
+        updateR ()
+        updateA ()
+        updateR ()
+        updateA ()
+        
+        null
+    } // cluster
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Given a new point/vector y, determine which cluster it belongs to.
+     *  @param y  the vector to classify
+     */
+    def classify (y: VectorD): Int = 0
+    
+} // AffinityPropagationClusterer
+
+object AffinityPropagationClustererTest extends App
+{
+    val v = new MatrixD ((6, 2), 1.0, 2.0,
+                                 2.0, 1.0,
+                                 5.0, 4.0,
+                                 4.0, 5.0,
+                                 9.0, 8.0,
+                                 8.0, 9.0)
+
+    val k = 3
+
+    println ("v = " + v)
+    println ("k = " + k)
+    println ("----------------------------------------------------")
+
+    val cl = new AffinityPropagationClusterer (v, k)
+    cl.cluster ()
+
+} // AffinityPropagationClustererTest
+

@@ -8,7 +8,7 @@
 
 package scalation.analytics.clusterer
 
-import scalation.linalgebra.VectorD
+import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `Clusterer` trait provides a common framework for several clustering
@@ -17,6 +17,11 @@ import scalation.linalgebra.VectorD
 trait Clusterer
 {
     private var _name: Array [String] = null   // optional names for clusters
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the centroids. Should only be called after `cluster ()`. 
+     */
+    def centroids (): MatrixD
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Given a set of points/vectors, put them in clusters, returning the cluster
@@ -30,6 +35,22 @@ trait Clusterer
      *  @param y  the vector to classify
      */
     def classify (y: VectorD): Int
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute a distance metric (distance squared) between vectors/points 'u' and 'v'.
+     *  @param u  the first vector/point
+     *  @param v  the second vector/point
+     */
+    def distance (u: VectorD, v: VectorD): Double = 
+    {
+        (u - v).normSq       // squared Euclidean norm used for efficiency, may use other norms
+    } // distance
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the sizes of the centroids. Should only be called after 
+     *  `cluster ()`. 
+     */
+    def csize (): VectorI
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Set the names for the clusters.
