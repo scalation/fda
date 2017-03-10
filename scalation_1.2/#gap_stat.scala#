@@ -1,4 +1,0 @@
-import scalation.linalgebra.{MatrixD, VectorD}
-import scalation.random.Variate
-import scalation.analaytics.KMeansClustering
-
