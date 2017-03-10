@@ -22,6 +22,7 @@ import scalation.random.RandomVecD
  */
 object GapStatistic
 {
+    import Algorithm._
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute a reference distribution based on a set of points.
@@ -80,15 +81,60 @@ object GapStatistic
      */
     def withinSSE (x: MatrixD, cl: Clusterer, clustr: Array[Int], k: Int): Double =
     {
-        println (cl.csize())
         (cumDistance (x, cl, clustr, k) / cl.csize().toDouble).sum
     } // withinSSE
 
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return a `KMeansPlusPlusClusterer` clustering on the given points with
+     *  an optimal number of clusters `k` chosen using the Gap statistic.
+     *  @param x        the vectors/points to be clustered stored as rows of a matrix
+     *  @param kMax     the upper bound on the number of clusters
+     *  @param algo     the reassignment aslgorithm used by `KMeansPlusPlusClusterer`
+     *  @param b        the number of reference distributions to create (default = 1)
+     *  @param useSVD   use SVD to account for the shape of the points (default = true)
+     *  @param plot     whether or not to plot the logs of the within-SSEs (default = false)
+     */
+    def KMeansPlusPlus (x: MatrixD, kMax: Int, algo: Algorithm = HARTIGAN, b: Int = 1, useSVD: Boolean = true, plot: Boolean = false): (KMeansPlusPlusClusterer, Array [Int], Int) =
+    {
+        val awk = new VectorD (kMax)
+        val rwk = new VectorD (kMax)
+        val gap = new VectorD (kMax)
+        val kv  = VectorD.range(1, kMax+1)
+        var opk = -1
+//        var opcl: KMeansPlusPlusClusterer = null
+//        var opcls: Array [Int] = null
+
+        for (k <- 0 until kMax) {
+            val ref          = GapStatistic.reference (x, useSVD)
+            val (acl, acls)  = KMeansPlusPlusClusterer.run (  x, k+1, algo)
+            val (rcl, rcls)  = KMeansPlusPlusClusterer.run (ref, k+1, algo)
+            awk(k) = log(GapStatistic.withinSSE (  x, acl, acls, k+1))
+            rwk(k) = log(GapStatistic.withinSSE (ref, rcl, rcls, k+1))
+            gap(k) = rwk(k) - awk(k)
+            if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - gap(k-1)*0.1)) { // TODO use stddev instead of 0.01*gap
+                opk = k
+            } // if
+        } // for
+
+        if (plot) {
+            import scalation.plot.Plot
+            new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k", true)
+            new Plot (kv, gap, null, "Gap vs. k", true)
+        } // if
+
+        val (cl, cls) = KMeansPlusPlusClusterer.run (x, opk, algo) // TODO used saved instead of reclustering
+        (cl, cls, opk)
+
+    } // KMeansPlusPlus
+
 } // GapStatistic
 
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `GapStatisticTest` object is used to test the `GapStatistic` object.
+ *  > run-main scalation.analytics.clusterer.GapStatisticTest
+ */
 object GapStatisticTest extends App
 {
-
     val v  = new MatrixD ((6, 2), 1.0, 2.0,
                                   2.0, 1.0,
                                   5.0, 4.0,
@@ -96,90 +142,34 @@ object GapStatisticTest extends App
                                   9.0, 8.0,
                                   8.0, 9.0)
 
-    v += 100
+    val maxK = 6
 
-/*    
-    import scalation.linalgebra.VectorD
-    import scalation.random.{Normal, Bernoulli}
-    val coin  = Bernoulli ()
-    val dist1 = Normal (2.0, 0.1)
-    val dist2 = Normal (8.0, 0.1)
-    val v     = new MatrixD (50, 2)
-    for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
-                                        if (coin.gen == 0) dist1.gen else dist2.gen)
- */
-
-    val ref1 = GapStatistic.reference (v, useSVD = false)
-    val ref2 = GapStatistic.reference (v, useSVD = true)    
-
-    println (s"   v = $v")
-    println (s"ref1 = $ref1")
-    println (s"ref2 = $ref2")    
-
-    import scalation.plot.Plot
-
-    new Plot (v.col(0), v.col(1), _title = "Original")
-    new Plot (ref1.col(0), ref1.col(1), _title = "Reference (no SVD)")
-    new Plot (ref2.col(0), ref2.col(1), _title = "Reference (with SVD)")        
-
+    val (cl, cls, k) = GapStatistic.KMeansPlusPlus (v, maxK, useSVD = false, plot = true)
+    println (s"  k = $k")
+    println (s"sse = ${cl.sse ()}")
 } // GapStatisticTest
 
-
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `GapStatisticTest2` object is used to test the `GapStatistic` object.
+ *  > run-main scalation.analytics.clusterer.GapStatisticTest2
+ */
 object GapStatisticTest2 extends App
 {
-    import Algorithm._
-
-/*    
-    val v  = new MatrixD ((6, 2), 1.0, 2.0,
-                                  2.0, 1.0,
-                                  5.0, 4.0,
-                                  4.0, 5.0,
-                                  9.0, 8.0,
-                                  8.0, 9.0)
-
- */
-
     import scalation.linalgebra.VectorD
     import scalation.random.{Normal, Bernoulli}
+
     val coin  = Bernoulli ()
     val dist1 = Normal (2.0, 0.1)
     val dist2 = Normal (8.0, 0.1)
     val v     = new MatrixD (50, 2)
+    val maxK  = 10 
+
     for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
                                         if (coin.gen == 0) dist1.gen else dist2.gen)
-    
 
-    val kMax  = 5
-
-    val awk = new VectorD (kMax)
-    val rwk = new VectorD (kMax)
-    val gap = new VectorD (kMax)
-    val kv  = VectorD.range(1, kMax+1)
-
-    for (k <- 0 until kMax) {
-        val ref        = GapStatistic.reference (v, useSVD = false)
-        val (acl, acls)  = KMeansPlusPlusClusterer.run (v, k+1, HARTIGAN)
-        val (rcl, rcls)  = KMeansPlusPlusClusterer.run (ref, k+1, HARTIGAN)        
-        awk(k) = log(GapStatistic.withinSSE (v, acl, acls, k+1))
-        rwk(k) = log(GapStatistic.withinSSE (ref, rcl, rcls, k+1))
-        gap(k) = rwk(k) - awk(k)
-        if (k != 0) {
-            if (gap(k-1) >= gap(k) - gap(k-1)*0.1) println (s"optimal k = ${k}")
-        } // if
-    } // for
-
-    println (s"log_awk = $awk")
-    println (s"log_rwk = $rwk")
-/*
-    val log_awk = awk.map(log(_))
-    val log_rwk = rwk.map(log(_))
-    val gap     = log_rwk - log_awk
- */
-    println (s"gap = $gap")    
-
-    import scalation.plot.Plot
-    new Plot (kv, awk, rwk)
-
+    val (cl, cls, k) = GapStatistic.KMeansPlusPlus (v, maxK, useSVD = false, plot = true)
+    println (s"  k = $k")
+    println (s"sse = ${cl.sse ()}")
 } // GapStatisticTest2
 
 

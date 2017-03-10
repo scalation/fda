@@ -25,10 +25,10 @@ import scalation.scala2d.Shapes.{BasicStroke, Dimension, Graphics, Graphics2D}
  *  @param z       the z vector of data values (secondary vertical) to compare with y
  *  @param _title  the title of the plot
  */
-class Plot (x: VectoD, y: VectoD, z: VectoD = null, _title: String = "Plot y vs. x")
+class Plot (x: VectoD, y: VectoD, z: VectoD = null, _title: String = "Plot y vs. x", lines: Boolean = false)
       extends VizFrame (_title, null)
 {
-    getContentPane ().add (new Canvas (x, y, z, getW, getH))
+    getContentPane ().add (new Canvas (x, y, z, getW, getH, lines))
     setVisible (true)
 
 } // Plot class
@@ -46,9 +46,9 @@ object Plot
      *  @param z       the z vector of data values (secondary vertical) to compare with y
      *  @param _title  the title of the plot
      */
-    def apply (x: VectoI, y: VectoI, z: VectoI = null, _title: String)
+    def apply (x: VectoI, y: VectoI, z: VectoI = null, _title: String, lines: Boolean = false)
     {
-        new Plot (x.toDouble, y.toDouble, if (z == null) null else z.toDouble, _title)
+        new Plot (x.toDouble, y.toDouble, if (z == null) null else z.toDouble, _title, lines)
     } // aux. constructor
 
 } // Plot object
@@ -80,7 +80,7 @@ class FramelessPlot (x: VectoD, y: VectoD, z: VectoD = null, var width: Int = 64
  *  @param width   the width
  *  @param height  the height
  */
-class Canvas (x: VectoD, y: VectoD, z: VectoD, width: Int, height: Int)
+class Canvas (x: VectoD, y: VectoD, z: VectoD, width: Int, height: Int, lines: Boolean = false)
       extends Panel
 {
     private val EPSILON   = 1E-9
@@ -145,15 +145,31 @@ class Canvas (x: VectoD, y: VectoD, z: VectoD, width: Int, height: Int)
 
         //:: Draw the dots for the data points being plotted
 
+        var px_pos = 0 // previous x
+        var py_pos = 0 // previous y
+
         for (i <- 0 until y.dim) {
             val xx = round ((x(i) - minX) * (frameW - 2 * offset).asInstanceOf [Double])
             x_pos = (xx / deltaX).asInstanceOf [Int] + offset
             val yy = round ((maxY - y(i)) * (frameH - 2 * offset).asInstanceOf [Double])
             y_pos = (yy / deltaY).asInstanceOf [Int] + offset
             dot.setFrame (x_pos, y_pos, diameter, diameter)         // x, y, w, h
+
             g2d.setPaint (black)
             g2d.fill (dot)
+
+            // connect with lines
+            if (i != 0 && lines) {
+                g2d.setStroke (new BasicStroke (1.0f))
+                g2d.drawLine (px_pos+1, py_pos+1, x_pos+1, y_pos+1)
+            } // if
+
+            px_pos = x_pos // update previous x
+            py_pos = y_pos // update previous y
+
         } // for
+
+        g2d.setStroke (new BasicStroke (2.0f))
 
         if (z != null) {
             for (i <- 0 until min (y.dim, z.dim)) {
@@ -164,6 +180,16 @@ class Canvas (x: VectoD, y: VectoD, z: VectoD, width: Int, height: Int)
                 dot.setFrame (x_pos, y_pos, diameter, diameter)         // x, z, w, h
                 g2d.setPaint (red)
                 g2d.fill (dot)
+
+                // connect with lines
+                if (i != 0 && lines) {
+                    g2d.setStroke (new BasicStroke (1.0f))
+                    g2d.drawLine (px_pos+1, py_pos+1, x_pos+1, y_pos+1)
+                } // if
+
+                px_pos = x_pos // update previous x
+                py_pos = y_pos // update previous y
+
             } // for
         } // if
     } // paintComponent
