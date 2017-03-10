@@ -51,7 +51,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
     protected val clustr   = Array.ofDim [Int] (x.dim1)          // assignment of vectors to clusters
     protected val dist     = new VectorD (x.dim1)                // distance to closest centroid
     protected val raniv    = PermutedVecI (VectorI.range (0, x.dim1), s)
-    protected val live     = (0 until k).toSet                   // live set of clusters
+    protected val live     = Set((0 until k).toSeq:_*)           // live set of clusters
 
     dist.set (Double.PositiveInfinity)
 
@@ -177,6 +177,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
 
     /** Cluster the points using a simplified version of the Hartigan-Wong 
      *  algorithm.
+     *  @see http://www.tqmp.org/RegularArticles/vol09-1/p015/p015.pdf
      */
     def clusterHartigan (): Array [Int] =
     {
@@ -191,12 +192,13 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         }} // for
         if (DEBUG) println (s"clustr = ${clustr.deep}")
         clustr
-    } // clusterHartiganWong
-
+    } // clusterHartigan
+    
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Reassign each vector/point to the cluster with the closest centroid.
      *  This one follows a simplified version of the Hartigan-Wong algorithm.
      *  Indicate done, if no points changed clusters (for stopping rule).
+     *  @see http://www.tqmp.org/RegularArticles/vol09-1/p015/p015.pdf
      */
     private def reassign2 (): Boolean =
     {
@@ -216,7 +218,6 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         } // for
         done                                                     // return whether there were no changes
     } // reassign2
-
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Find the closest cluster to point 'u'.
@@ -311,6 +312,21 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         for (i <- x.range1) sum += distance (x(i), cent(clustr(i)))
         sum
     } // sse
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the sum of squared errors (distance sqaured from centroid `c`
+     *  for all points) for centroid `c`.
+     */
+    def sse (c: Int): Double =
+    {
+        var sum = 0.0
+        for (i <- x.range1) {
+            val cli = clustr(i)
+            if (cli == c) sum += distance (x(i), cent(cli))
+        } // for
+        sum
+    } // sse
+
 
 } // KMeansPlusPlusClusterer
 
