@@ -49,11 +49,11 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
     protected val pdf      = new VectorD (x.dim1)                // pdf for choosing centroids
     protected val sizes    = new VectorI (k)                     // the cluster sizes
     protected val clustr   = Array.ofDim [Int] (x.dim1)          // assignment of vectors to clusters
-    protected val dist     = new VectorD (x.dim1)                // distance to closest centroid
+//    protected val dist     = new VectorD (x.dim1)                // distance to closest centroid
     protected val raniv    = PermutedVecI (VectorI.range (0, x.dim1), s)
     protected val live     = Set((0 until k).toSeq:_*)           // live set of clusters
 
-    dist.set (Double.PositiveInfinity)
+//    dist.set (Double.PositiveInfinity)
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Return the sizes of the centroids. Should only be called after 
@@ -118,19 +118,22 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         if (DEBUG) println (s"initial cent = $cent")
     } // initCentroids
 
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Reassign each vector/point to the cluster with the closest centroid.
-     *  Indicate done, if no points changed clusters (for stopping rule).
-     */
-    private def reassign (): Boolean =
+    /*
+    private def reassign (first: Boolean = false): Boolean =
     {
+        println (s"reassign(first = $first")
         var done = true                                          // done indicates no changes
         for (i <- x.range1) {
             val v = x(i)                                         // let v be the ith vector
+            val curDist = if (first) Double.PositiveInfinity
+                          else       distance (v, cent(clustr(i))) // current distance from centroid
+            println (s"curDist = $curDist; dist($i) = ${dist(i)}")
             for (c <- 0 until k) {
                 val newDist = distance (v, cent(c))              // calc distance to centroid c
-                if (newDist < dist(i)) {                         // is it closer than old distance
-                    dist(i)           = newDist                  // make it the new distance
+
+//                if (newDist < dist(i)) {                         // is it closer than old distance
+//                    dist(i)           = newDist                  // make it the new distance
+                if (newDist < curDist) {
                     sizes(clustr(i)) -= 1                        // decrement size of previous cluster
                     clustr(i)         = c                        // reassign vector x(i) to cluster c
                     sizes(c)         += 1                        // increment size of cluster c
@@ -138,9 +141,42 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
                 } // if
             } // for
         } // for
-        for (c <- 0 until k) sizes(c) = 0
-        for (i <- x.range1) sizes(clustr(i)) += 1                // TODO fix
+        //for (c <- 0 until k) sizes(c) = 0
+        //for (i <- x.range1) sizes(clustr(i)) += 1                // TODO fix
         done                                                     // return whether there were no changes
+    } // reassign
+     */
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Reassign each vector/point to the cluster with the closest centroid.
+     *  Indicate done, if no points changed clusters (for stopping rule).
+      */
+    private def reassign (first: Boolean = false): Boolean =
+    {
+        var done = true
+        for (i <- x.range1) {
+            if (first) {
+                val cc     = closest (x(i))
+                clustr(i)  = cc
+                sizes(cc) += 1                
+                done       = false
+            } else {
+                val c0 = clustr(i)
+                if (sizes(c0) > 1) {
+                    val cc  = closest (x(i))
+                    if (cc != c0) {
+                        clustr(i)  = cc
+                        sizes(c0) -= 1
+                        sizes(cc) += 1
+                        done       = false
+                    } // if
+                } // if
+            } // if
+        } // for
+        for (c <- 0 until k if sizes(c) == 0) {
+            assert (false, s"reassign (first = $first): empty cluster c = $c; sizes = $sizes")
+        } // if
+        done
     } // reassign
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -153,6 +189,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         for (i <- x.range1) {
             val ci  = clustr(i)                                  // x(i) currently assigned to cluster ci
             cx(ci)  = cx(ci) + x(i)                          // add the next vector in cluster
+//            cx(ci) += x(i)                          // add the next vector in cluster            
             cs(ci) += 1.0                                    // add 1 to number in cluster
         } // for
         for (c <- 0 until k) cent(c) = cx(c) / cs(c)             // divide to get averages/means
@@ -164,7 +201,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
     private def clusterLloyd (): Array [Int] =
     {
         breakable { for (l <- 1 to MAX_ITER) {
-            if (reassign ()) break                               // reassign points to clusters (no change => break)
+            if (reassign (l==1)) break                           // reassign points to clusters (no change => break)
             calcCentroids ()                                     // re-calculate the centroids
             if (DEBUG) {
                 println ("(" + l + ") clustr = " + clustr.deep)
@@ -181,7 +218,8 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
      */
     def clusterHartigan (): Array [Int] =
     {
-        reassign ()
+        reassign (true)
+        //for (c <- 0 until k if sizes(c) == 0) assert (false, s"1!!!empty cluster c = $c; sizes = $sizes")
         calcCentroids ()
         breakable { for (l <- 1 to MAX_ITER) {
             if (reassign2 ()) break                              // reassign points to clusters (no change => break)
@@ -189,6 +227,8 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
                 println ("(" + l + ") clustr = " + clustr.deep)
                 println ("(" + l + ") cent   = " + cent)
             } // if
+            //println (s"sizes = $sizes")
+            //for (c <- 0 until k if sizes(c) == 0) assert (false, s"2!!!empty cluster c = $c; l = $l")
         }} // for
         if (DEBUG) println (s"clustr = ${clustr.deep}")
         clustr
@@ -216,6 +256,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
                 if (c1 != c0) done = false                       // changed clusters => not done
             } // if
         } // for
+        for (c <- 0 until k if sizes(c) == 0) assert (false, s"reassign2 (): empty cluster c = $c; sizes = $sizes")
         done                                                     // return whether there were no changes
     } // reassign2
 
@@ -249,7 +290,6 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         } // for
         cmin
     } // closestByR2
-
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Find the closest 2 centroids to the point `u`, respectively.
@@ -289,6 +329,8 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
      */
     def cluster (): Array [Int] =
     {
+        if (clustered) return clustr
+        clustered = true
         initCentroids ()
         algo match {
             case LLOYD         => clusterLloyd ()
@@ -300,18 +342,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
     /** Given a new point/vector y, determine which cluster it belongs to.
      *  @param y  the vector to classify
      */
-    def classify (y: VectorD): Int = 0
-
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Compute the sum of squared errors (distance sqaured from centroid for all points)
-     */
-    def sse (): Double =
-    {
-        //x.range1.view.map (i => distance (x(i), cent(clustr(i)))).sum
-        var sum = 0.0
-        for (i <- x.range1) sum += distance (x(i), cent(clustr(i)))
-        sum
-    } // sse
+    def classify (y: VectorD): Int = 0 // TODO fix
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute the sum of squared errors (distance sqaured from centroid `c`
@@ -327,6 +358,10 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
         sum
     } // sse
 
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the sum of squared errors (distance sqaured from centroid for all points)
+     */
+    def sse (): Double = sse (x)
 
 } // KMeansPlusPlusClusterer
 
@@ -336,7 +371,7 @@ class KMeansPlusPlusClusterer (x: MatrixD, k: Int, algo: Algorithm = LLOYD, s: I
 object KMeansPlusPlusClusterer
 {
 
-    private var streams = VectorI.range (0, 10)
+    private var streams = VectorI.range (0, 1000)
 
     def permuteStreams (stream: Int = 0)
     {
@@ -346,19 +381,25 @@ object KMeansPlusPlusClusterer
 
     def run (x: MatrixD, k: Int, algo: Algorithm = LLOYD): (KMeansPlusPlusClusterer, Array [Int]) =
     {
-        var seen   = false
+//        println (s"run(stream = $streams)")
+        var iters  = 0
+        val check  = 3
+        var seen   = 0
         var ssemin = Double.PositiveInfinity
         var kmppmin: KMeansPlusPlusClusterer = null
         for (s <- streams) {
-            val kmpp = new KMeansPlusPlusClusterer (x, k, algo)
+            iters += 1
+            val kmpp = new KMeansPlusPlusClusterer (x, k, algo, s = s)
             val cls = kmpp.cluster ()
             val sse = kmpp.sse ()
+            //println (s"sse = $sse")
             if (sse == ssemin) {
-                if (seen) return (kmppmin, kmppmin.clustr)
-                else      seen = true
+                if (seen==check) return (kmppmin, kmppmin.clustr) // { println (s"iters = $iters"); return (kmppmin, kmppmin.clustr) }
+                else             seen += 1
             } // if
-            if (sse < ssemin) { ssemin = sse; kmppmin = kmpp }
+            if (sse < ssemin) { ssemin = sse; kmppmin = kmpp; seen = 0 }
         } // for
+//        { println (s"iters = $iters"); return (kmppmin, kmppmin.clustr) }
         return (kmppmin, kmppmin.clustr)
     } // run
 
@@ -481,4 +522,55 @@ object KMeansPlusPlusClustererTest2
     test2 (v, k, opt)
 
 } // KMeansPlusplusclustererTest2
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPlusPlusClustererTest3` object is used to test the `KMeansPlusPlusCluterer`
+ *  class.
+ *  > run-main scalation.analytics.clusterer.KMeansPlusPlusClustererTest3
+ */
+object KMeansPlusPlusClustererTest3
+       extends App with KMeansPlusPlusClustererTester
+{
+    import scalation.random.{Normal, Bernoulli}
+    val coin  = Bernoulli ()
+    val dist1 = Normal (2.0, 1.0)
+    val dist2 = Normal (8.0, 1.0)
+    val v     = new MatrixD (50, 3)
+    for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen)
+
+    val k   = 8
+    val opt = 106         // rounded up
+
+    test (v, k, opt)
+    test2 (v, k, opt)
+
+} // KMeansPlusplusclustererTest3
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPlusPlusClustererTest4` object is used to test the `KMeansPlusPlusCluterer`
+ *  class.
+ *  > run-main scalation.analytics.clusterer.KMeansPlusPlusClustererTest4
+ */
+object KMeansPlusPlusClustererTest4
+       extends App with KMeansPlusPlusClustererTester
+{
+    import scalation.random.{Normal, Bernoulli}
+    val coin  = Bernoulli ()
+    val dist1 = Normal (2.0, 1.0)
+    val dist2 = Normal (8.0, 1.0)
+    val v     = new MatrixD (100, 4)
+    for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen)
+
+    val k   = 16
+    val opt = 290         // rounded up
+
+    test (v, k, opt)
+    test2 (v, k, opt)
+
+} // KMeansPlusplusclustererTest4
 
