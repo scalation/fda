@@ -34,9 +34,8 @@ class KMeansClustering (x: MatrixD, k: Int, s: Int = 0, primary: Boolean = true)
       extends Clusterer with Error
 {
     if (k >= x.dim1) flaw ("constructor", "k must be less than the number of vectors")
-
-    private val DEBUG    = true                          // debug flag
-    private val MAX_ITER = 400                           // the maximum number of iterations
+    private val DEBUG    = false                          // debug flag
+    private val MAX_ITER = 200                           // the maximum number of iterations
     private val cent     = new MatrixD (k, x.dim2)       // the k centroids of clusters
     private val clustr   = Array.ofDim [Int] (x.dim1)    // assignment of vectors to clusters
     private val dist     = new VectorD (x.dim1)          // distance to closest centroid

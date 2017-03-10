@@ -57,6 +57,7 @@ class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: 
     private var rSquared   = -1.0                               // coefficient of determination (quality of fit)
     private var rBarSq     = -1.0                               // Adjusted R-squared
     private var fStat      = -1.0                               // F statistic (quality of fit)
+    var sse                = 0.0                                // sum of squared errors
 
     type Fac_QR = Fac_QR_H [MatrixD]                            // change as needed
 
@@ -108,7 +109,7 @@ class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: 
         b        = if (x_pinv == null) fac.solve (yy).asInstanceOf [VectorD]   // FIX
                    else x_pinv * yy                             // x parameter vector [b_1, ... b_k]
         val e    = yy - x * b                                   // residual/error vector
-        val sse  = e dot e                                      // residual/error sum of squares
+        sse      = e dot e                                      // residual/error sum of squares
         val sst  = (yy dot yy) - pow (yy.sum, 2) / m            // total sum of squares
         val ssr  = sst - sse                                    // regression sum of squares
         rSquared = ssr / sst                                    // coefficient of determination
