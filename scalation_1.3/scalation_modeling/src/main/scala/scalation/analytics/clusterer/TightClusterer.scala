@@ -1,22 +1,23 @@
 
 package scalation.analytics.clusterer
 
-import scalation.linalgebra.MatrixD
+import scalation.linalgebra.{MatrixD, SparseMatrixD}
 import scalation.random.RandomVecSample
+import scalation.analytics.clusterer.{KMeansPlusPlusClusterer => KMPPClusterer}
 
 class TightClusterer (x: MatrixD, k: Int, s: Int = 0)
 {
     val b  = 10                                           // times to resample
     val ns = (x.dim1 * 0.7).toInt                         // size of random sample
     val rs = RandomVecSample (x.dim1, ns, s)              // random sample generator
-    val d  = new MatrixD (ns, ns)                         // comembership matrix
-    val md = new MatrixD (ns, ns)                         // mean comembership matrix
+    val d  = new SparseMatrixD (ns, ns)                   // comembership matrix
+    val md = new SparseMatrixD (ns, ns)                   // mean comembership matrix
 
     for (l <- 0 until b) {
         val y = x.selectRows (rs.igen ().toArray)         // generate random subsample  // FIX - why toArray
-        println (s"y = $y")                               
-        val kmc    = new KMeansClustering (y, k, s)       // apply clustering to the sample
-        val clustr = kmc.cluster ()                       // get the clusters
+        println (s"y = $y")
+        KMPPClusterer.permuteStreams (s)                  // permute the random number generator
+        val (kmc, clustr) = KMPPClusterer.run (y, k)      // apply clustering to the sample
         println (s"clustr = ${clustr.deep}")
 
         for (i <- y.range1; j <- y.range1) d(i, j) = if (clustr(i) == clustr(j)) 1.0 else 0.0
