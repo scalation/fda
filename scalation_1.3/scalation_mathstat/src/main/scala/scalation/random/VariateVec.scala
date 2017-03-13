@@ -77,26 +77,26 @@ abstract class VariateVec (stream: Int = 0)
 case class ProbabilityVec (n: Int, d: Double = 0.5, stream: Int = 0)
      extends VariateVec (stream)
 {
-     private val mu  = new VectorD (n); mu.set (1.0 / n.toDouble)   // mean
-     private val rng = Random (stream)                              // random number generator
+    private val mu  = new VectorD (n); mu.set (1.0 / n.toDouble)   // mean
+    private val rng = Random (stream)                              // random number generator
 
-     if (d < 0.0 || d > 1.0) flaw ("constructor", "d must be in [0, 1]")
+    if (d < 0.0 || d > 1.0) flaw ("constructor", "d must be in [0, 1]")
 
-     def mean: VectorD = mu
+    def mean: VectorD = mu
 
-     def pf (z: VectorD): Double =
-     {
-         0.0    // FIX
-     } // pf
+    def pf (z: VectorD): Double =
+    {
+        0.0    // FIX
+    } // pf
 
-     def gen: VectorD =
-     {
+    def gen: VectorD =
+    {
         val z = new VectorD (n)
         for (i <- 0 until n) z(i) = 1.0 + (rng.gen - .5) * d
         z / z.sum
-     } // gen
+    } // gen
     
-    override def igen: VectorI = gen.toInt
+    def igen: VectorI = gen.toInt
      
 } // ProbabilityVec class
 
@@ -116,7 +116,7 @@ case class NormalVec (mu: VectorD, cov: MatrixD, stream: Int = 0)
 {
     private val normal = Normal (0.0, 1.0, stream)           // generator for standard normals
     private val c_cov  = new Fac_Cholesky (cov).factor1 ()   // compute Cholesky Factorization of cov
-                             .asInstanceOf [VectorD]
+                             .asInstanceOf [MatrixD]
 
     def mean: VectorD = mu
 
@@ -183,7 +183,7 @@ case class PermutedVecD (x: VectorD, stream: Int = 0)
     private val mu  = x.sum / x.dim.toDouble            // mean
     private val rng = Randi0 (x.dim - 1, stream)        // random integer generator
 
-    def mean: VectorD =  { val mv = new VectorD (x.dim); mv.set (mu); mv }
+    def mean: VectorD = VectorD.fill (x.dim)(mu)
 
     def pf (z: VectorD): Double = 1.0 / fac (x.dim)
 
@@ -216,7 +216,7 @@ case class PermutedVecI (x: VectorI, stream: Int = 0)
     private val mu  = x.sum / x.dim.toDouble            // mean
     private val rng = Randi0 (3 * x.dim, stream)        // random integer generator
 
-    def mean: VectorD =  { val mv = new VectorD (x.dim); mv.set (mu); mv }
+    def mean: VectorD = VectorD.fill (x.dim)(mu)
 
     def pf (z: VectorD): Double = 1.0 / fac (x.dim)
 
@@ -233,6 +233,44 @@ case class PermutedVecI (x: VectorI, stream: Int = 0)
     } // igen
 
 } // PermutedVecI class
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `RandomVecSample` class generates random sample from a population.
+ *  @param pop     the size of the population (0, 1, ... pop-1)
+ *  @param samp    the size of the random samples
+ *  @param stream  the random number stream
+ */
+case class RandomVecSample (pop: Int, samp: Int, stream: Int = 0)
+     extends VariateVec (stream)
+{
+    _discrete = true
+
+    if (samp >= pop) {
+        flaw ("constructor", "requires samp < pop")
+        throw new IllegalArgumentException ("RandomVecSample: samp too large")
+    } // if
+
+    private val mu  = pop / 2.0                         // mean
+    private val rng = Randi0 (pop-1, stream)            // random integer generator
+
+    def mean: VectorD = VectorD.fill (samp)(mu)
+
+    def pf (z: VectorD): Double = 1.0 / fac (pop)
+
+    def gen: VectorD = igen.toDouble
+
+    def igen: VectorI =
+    {
+        val y = VectorI.range (0, pop)                  // generate vector containing 0, 1, ... pop-1
+        for (i <- 0 until samp) {
+            val j = rng.igen                            // random integer 0 to pop-1
+            val t = y(i); y(i) = y(j); y(j) = t         // swap y(i) and y(j)
+        } // for
+        y.slice (0, samp)                               // take the first sampSize elements
+    } // igen
+
+} // RandomVecSample
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -254,7 +292,7 @@ case class RandomVecD (dim: Int = 10, max: Double = 20.0, min: Double = 0.0,
     private val rn  = Random (stream)                   // random number generator
     private val ri  = Randi0 (runLength, stream)        // random integer for repetition
     
-    def mean: VectorD = { val mv = new VectorD (dim); mv.set (mu); mv }
+    def mean: VectorD = VectorD.fill (dim)(mu)
 
     def pf (z: VectorD): Double = 1.0 / (max - min) ~^ dim
 
@@ -298,13 +336,13 @@ case class RandomVecI (dim: Int = 10, max: Int = 20, min: Int = 10, skip: Int = 
 
     if (unique && max < dim-1) {
         flaw ("constructor", "requires max >= dim-1")
-        throw new IllegalArgumentException ("max too small")
+        throw new IllegalArgumentException ("RandomVecI: max too small")
     } // if
 
     private val mu  = (max - min) / 2.0                 // mean
     private val rng = Randi0 (max, stream)              // random integer generator
 
-    def mean: VectorD =  { val mv = new VectorD (dim); mv.set (mu); mv }
+    def mean: VectorD = VectorD.fill (dim)(mu)
 
     def pf (z: VectorD): Double = 1.0 / (max - min) ~^ dim
 
@@ -339,7 +377,7 @@ case class RandomVecS (dim: Int = 10, unique: Boolean = true, stream: Int = 0)
     private val mu  = NaN                               // mean
     private val rng = RandomStr (stream = stream)       // random string generator
 
-    def mean: VectorD =  { val mv = new VectorD (dim); mv.set (mu); mv }
+    def mean: VectorD = VectorD.fill (dim)(mu)
 
     def pf (z: VectorD): Double = NaN
 
@@ -380,7 +418,7 @@ case class Multinomial (p: Array [Double] = Array (.4, .7, 1.0), n: Int = 5, str
 
     private val dice = Dice (p, stream)
 
-    val mean: VectorD = { val mn = new VectorD (p.length); mn.set (dice.mean); mn }
+    val mean: VectorD = VectorD.fill (p.length)(dice.mean)
 
     def pf (z: VectorD): Double =
     {
@@ -431,6 +469,11 @@ object VariateVecTest extends App
      println ("mean = " + rvv.mean)
      for (k <- 0 until 30) println (rvv.igen)
 
+     println ("Test: RandomVecSample random vector generation ---------------")
+     rvv = RandomVecSample (10, 5)             // random permutation generator
+     println ("mean = " + rvv.mean)
+     for (k <- 0 until 30) println (rvv.igen)
+
      println ("Test: RandomVecD random vector generation --------------------")
      rvv = RandomVecD ()                             // random vector generator
      println ("mean = " + rvv.mean)
@@ -444,7 +487,7 @@ object VariateVecTest extends App
      println ("Test: RandomVecS random vector generation --------------------")
      rvv = RandomVecS ()                             // random vector generator
      println ("mean = " + rvv.mean)
-     for (k <- 0 until 30) println (rvv.igen)
+     for (k <- 0 until 30) println (rvv.asInstanceOf [RandomVecS].sgen)
 
      println ("Test: Multinomial random vector generation --------------------")
      rvv = Multinomial ()                             // random vector generator

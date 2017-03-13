@@ -17,6 +17,7 @@ import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 trait Clusterer
 {
     private var _name: Array [String] = null   // optional names for clusters
+    protected var clustered = false
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Return the centroids. Should only be called after `cluster ()`. 
@@ -69,6 +70,19 @@ trait Clusterer
     {
         if (_name != null && i < _name.length) _name(i) else "unknown"
     } // getName
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the sum of squared errors (distance sqaured from centroid for all points)
+     */
+    def sse (x: MatrixD): Double =
+    {
+        //x.range1.view.map (i => distance (x(i), cent(clustr(i)))).sum
+        var sum    = 0.0
+        val cent   = centroids ()
+        val clustr = cluster ()
+        for (i <- x.range1) sum += distance (x(i), cent(clustr(i)))
+        sum
+    } // sse
 
 } // Clusterer trait
 

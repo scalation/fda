@@ -93,6 +93,7 @@ class HierClustering (x: MatrixD, k: Int = 2)
 
         finalClusters ()                      // make final cluster assignments
         calcCentroids ()                      // calculate centroids for clusters
+
         clustr
     } // cluster
 
@@ -116,10 +117,12 @@ class HierClustering (x: MatrixD, k: Int = 2)
         val cx = new MatrixD (k, x.dim2)    // to hold sum of vectors for each cluster
         val cs = new VectorD (k)            // to hold number of vectors in each cluster
         for (i <- 0 until x.dim1) {
-            cx(clustr(i)) += x(i)           // add the next vector in cluster
-            cs(clustr(i)) += 1.0            // add 1 to number in cluster
+            val ci = clustr(i)
+            cx(ci) = cx(ci) + x(i)           // add the next vector in cluster
+            cs(ci) += 1.0            // add 1 to number in cluster
         } // for
         for (c <- 0 until k) cent(c) = cx(c) / cs(c)   // divide to get averages/means
+        println(s"cent = $cent")        
     } // calcCentroids
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -145,6 +148,7 @@ class HierClustering (x: MatrixD, k: Int = 2)
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `HierClusteringTest` object is used to test the `HierClustering` class.
+ *  > run-main scalation.analytics.clusterer.HierClusteringTest
  */
 object HierClusteringTest extends App
 {
@@ -161,10 +165,35 @@ object HierClusteringTest extends App
     println ("z = " + z)
     println ("----------------------------------------------------")
 
-    val cl = new HierClustering (v)                 
+    val cl = new HierClustering (v, 3)                 
     println ("--- final cluster = " + cl.cluster ().deep + "\n")
     println ("--- classify " + y + " = " + cl.classify (y) + "\n")
     println ("--- classify " + z + " = " + cl.classify (z) + "\n")
+    println (s"sse = ${cl.sse(v)}")
 
 } // HierClusteringTest object
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `HierClusteringTest2` object is used to test the `HierClustering` class.
+ *  > run-main scalation.analytics.clusterer.HierClusteringTest2
+ */
+object HierClusteringTest2 extends App
+{
+    import scalation.random.{Normal, Bernoulli}
+    val coin  = Bernoulli ()
+    val dist1 = Normal (2.0, 1.0)
+    val dist2 = Normal (8.0, 1.0)
+    val v     = new MatrixD (50, 2)
+    for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen)
+
+    println ("v = " + v)
+    println ("----------------------------------------------------")
+
+    val cl = new HierClustering (v, 4)                 
+    println ("--- final cluster = " + cl.cluster ().deep + "\n")
+    println (s"sse = ${cl.sse(v)}")
+
+} // HierClusteringTest2 object
+
 

@@ -111,7 +111,7 @@ object GapStatistic
             awk(k) = log(GapStatistic.withinSSE (  x, acl, acls, k+1))
             rwk(k) = log(GapStatistic.withinSSE (ref, rcl, rcls, k+1))
             gap(k) = rwk(k) - awk(k)
-            if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - gap(k-1)*0.1)) { // TODO use stddev instead of 0.01*gap
+            if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - gap(k)*0.1)) { // TODO use stddev instead of 0.01*gap
                 opk = k
             } // if
         } // for
