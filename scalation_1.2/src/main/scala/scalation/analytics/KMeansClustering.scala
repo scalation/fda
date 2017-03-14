@@ -17,8 +17,20 @@ import scalation.random.{Randi, Uniform}
 import scalation.util.{banner, Error}
 import com.opencsv.CSVWriter
 import java.io.{FileWriter,File}
-
 import scala.math.exp
+
+object KMeansClustering
+{
+    private var streams = VectorI.range (0, 10)
+    
+    def permuteStreams (stream: Int = 0)
+    {
+        import scalation.random.PermutedVecI
+        streams = PermutedVecI (streams, stream).igen
+    } // permuteStreams
+
+}
+
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `KMeansClustering` class cluster several vectors/points using k-means
  *  clustering.  Either (1) randomly assign points to 'k' clusters or (2) randomly
@@ -34,7 +46,7 @@ class KMeansClustering (x: MatrixD, k: Int, s: Int = 0, primary: Boolean = true)
       extends Clusterer with Error
 {
     if (k >= x.dim1) flaw ("constructor", "k must be less than the number of vectors")
-    private val DEBUG    = false                          // debug flag
+    private val DEBUG    = true                          // debug flag
     private val MAX_ITER = 200                           // the maximum number of iterations
     private val cent     = new MatrixD (k, x.dim2)       // the k centroids of clusters
     private val clustr   = Array.ofDim [Int] (x.dim1)    // assignment of vectors to clusters
@@ -111,6 +123,7 @@ class KMeansClustering (x: MatrixD, k: Int, s: Int = 0, primary: Boolean = true)
 	    	val v = x(i)				   // let v be the ith vecto
             	breakable{for (c <- 0 until k) {
                     val newDist = distance (v, cent(c))    // calc distance to centroid c
+		    println(s"old dist: ${dist(i)}, new dist: $newDist")
                     if (newDist < dist(i)) {               // is it closer than old distance
                        dist(i)  = newDist                 // make it the new distance
                        clustr(i) = c                      // assign vector i to cluster c
@@ -339,7 +352,31 @@ class KMeansClustering (x: MatrixD, k: Int, s: Int = 0, primary: Boolean = true)
 	//(w(),lBar, gapK, sk)
     } // gap
 
-    	
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the sum of squared errors (distance sqaured from centroid `c`
+     *  for all points) for centroid `c`.
+     */
+    def sse (c: Int): Double =
+    {
+        var sum = 0.0
+        for (i <- x.range1) {
+            val cli = clustr(i)
+            if (cli == c) sum += distance (x(i), cent(cli))
+        } // for
+        sum
+    } // sse
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Compute the sum of squared errors (distance sqaured from centroid for all points)
+     */
+    def sse (): Double =
+    {
+        //x.range1.view.map (i => distance (x(i), cent(clustr(i)))).sum
+        var sum = 0.0
+        for (i <- x.range1) sum += distance (x(i), cent(clustr(i)))
+        sum
+    } // sse
+
 } // KMeansClustering class
 
 
@@ -438,40 +475,59 @@ object KMeansGapTest extends App
 object ClusGapNewTest extends App
 {
 	import math.log
-	val maxClusters = 5
+	val maxClusters = 10
 	import scalation.plot.FPlot
 	var kv = VectorD.range(1,maxClusters+1)
 	val clusters = Array.ofDim[Array[Int]](maxClusters)
-	val centroids = Array.ofDim[MatrixD](maxClusters)
+	//val centroids = Array.ofDim[MatrixD](maxClusters)
 	println(s"kv: $kv")
-	var sse = new VectorD(maxClusters)
-	var usse = new VectorD(maxClusters)
-	val gaps = Array.ofDim[(Double,Double,Double,Double)](maxClusters)
-	val v = new MatrixD ((6, 2), 1.0, 2.0,
+	val sse = Array.ofDim[Double](maxClusters)
+	//var sse = new VectorD(maxClusters)
+	//var usse = new VectorD(maxClusters)
+	//val gaps = Array.ofDim[(Double,Double,Double,Double)](maxClusters)
+	/*val v = new MatrixD ((6, 2), 1.0, 2.0,
                                  2.0, 1.0,
                                  5.0, 4.0,
                                  4.0, 5.0,
                                  9.0, 8.0,
-                                 8.0, 9.0)
-	var wVals = Array.ofDim[Double](5)
-	for(i <- 1 to maxClusters){//for k = 1...10
-	      	    val s = (System.currentTimeMillis % 1000).toInt
-	            val cl = new KMeansClustering(v, i, s)
-		    println(s"new random seed: $s")
-		    clusters(i-1) = cl.cluster()
-		    centroids(i-1) = cl.getCentroids()
-		    wVals(i-1) = cl.w()
-		    //sse(i-1) = wVals(i-1)
-		    println(s"w() results for $i many clusters: ${log(wVals(i-1))}")
-		    gaps(i-1)  = cl.gap()
-		    println(s"gap results for $i many clusters: ${gaps(i-1)}")
-		    sse(i-1)   = gaps(i-1)._1
-		    usse(i-1)  = gaps(i-1)._2
-		    //(w(),lBar, gapK, sk) 
-	} // for
-	for (i <- 0 until maxClusters) println(s"${gaps(i)}")
+                                 8.0, 9.0)*/
 
-breakable{for(i <- 1 until maxClusters){
+import scalation.random.{Normal, Bernoulli}
+    val coin  = Bernoulli ()
+    val dist1 = Normal (2.0, 1.0)
+    val dist2 = Normal (8.0, 1.0)
+    val v     = new MatrixD (50, 2)
+    //for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
+          //                              if (coin.gen == 0) dist1.gen else dist2.gen)
+					
+    for (i <- 0 until 15) v(i) = VectorD (dist1.gen,dist1.gen)
+    for (i <- 0 until 15) v(i) = VectorD (dist1.gen,dist2.gen)
+    for (i <- 0 until 15) v(i) = VectorD (dist2.gen,dist1.gen)
+    for (i <- 0 until 15) v(i) = VectorD (dist2.gen,dist2.gen)
+    
+	//var wVals = Array.ofDim[Double](maxClusters)
+	//for(i <- 1 to maxClusters){//for k = 1...10
+	for( i <- 1 to maxClusters){
+	       	    println(s"\n\nNew Clustering...\n\n")
+	      	    val s = (System.currentTimeMillis % 1000).toInt
+	            val cl = new KMeansClustering(v, 4, s)
+		    //println(s"new random seed: $s")
+		    clusters(i-1) = cl.cluster()
+		    //centroids(i-1) = cl.getCentroids()
+		    //wVals(i-1) = cl.w()
+		    sse(i-1) = cl.sse()
+		    //println(s"w() results for $i many clusters: ${log(wVals(i-1))}")
+		    //gaps(i-1)  = cl.gap()
+		    //println(s"gap results for $i many clusters: ${gaps(i-1)}")
+		    //sse(i-1)   = gaps(i-1)._1
+		    //usse(i-1)  = gaps(i-1)._2
+		    //(w(),lBar, gapK, sk)
+		   
+	} // for
+
+/*	for (i <- 0 until maxClusters) println(s"${gaps(i)}")
+
+	    breakable{for(i <- 1 until maxClusters){
 	        val (lwki, elwki, gapi, ski) = gaps(i)
 		val (lwki1, elwki1, gapi1, ski1) = gaps(i+1)
 		println(s" gapi: ${gapi}, gapi1: ${gapi1}")
@@ -483,15 +539,20 @@ breakable{for(i <- 1 until maxClusters){
 	      
 	} // for
 	} // breakable
-	println(s"sse: $sse")
+
 	println(s"usse: $usse")
 
-	println("Clusters: ")
-	for(cluster <- clusters) println(cluster.deep)
+	println("Clusters: ")*/
+	
+	//println(s"sse: $sse")
+	var percentage = 0.0
+	//for(i <- sse.indices ) if (sse(i) <= 76) percentage += 1.0
+	//println(s"Accuracy: ${percentage/1000}")
+	//for(cluster <- clusters) println(cluster.deep)
 
-	println("Centroids")
-	for(i <- centroids.indices ; j <- centroids(i).range1 )  println(centroids(i)(j))
-	val plot = new FPlot(kv,sse, kv, (x: Double)=>usse(x.toInt - 1),"Miller fixes Michael's mistakes")
+	//println("Centroids")
+	//for(i <- centroids.indices ; j <- centroids(i).range1 )  println(centroids(i)(j))
+	//val plot = new FPlot(kv,sse, kv, (x: Double)=>usse(x.toInt - 1),"Miller fixes Michael's mistakes")
 }
 
 object wTester extends App
@@ -509,4 +570,92 @@ object wTester extends App
 	    cl.cluster()
 	    println(s"w(): ${log(cl.w())}")
 	}
+}
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPlusPlusClustererTester` trait includes a `test` function to aid
+ *  in the testing of the `KMeansPlusPlusClusterer` class. 
+ */
+trait KMeansPlusPlusClustererTester
+{
+    import scalation.stat.Statistic
+    import scalation.plot.Plot
+
+    def checkEmpty (cls: Array [Int], k: Int)
+    {
+        for (c <- 0 until k if !cls.contains(c)) assert(false, s"empty cluster found c = $c")
+    } // checkEmpty
+
+    def test (v: MatrixD, k: Int, opt: Double = -1, plot: Boolean = false, nstreams: Int = 1000)
+    {
+        banner (s"Testing KMeansPlusPlusCluster")
+        println (s"v.dim1 = ${v.dim1}")
+        println (s"v.dim2 = ${v.dim2}")
+        println (s"     k = $k")
+        if (plot) new Plot (v.col(0), v.col(1))
+        
+        
+            val statSSE = new Statistic ("sse")
+            var ok      = 0
+            for (s <- 0 until nstreams) {
+                val cl  = new KMeansClustering (v, k, s)
+                cl.cluster ()
+                val sse = cl.sse ()
+                // println (s"stream $s, sse = $sse")
+                statSSE.tally (sse)
+                if ((opt != -1) && (sse <= opt)) ok += 1
+            } // for
+            println (Statistic.labels)
+            println (statSSE)
+            println (s"min sse = ${statSSE.min}")
+            if (opt != -1) println (s"optimal = $ok / $nstreams")            
+    } // test
+
+    def test2 (v: MatrixD, k: Int, opt: Double = -1, plot: Boolean = false, nstreams: Int = 1000)
+    {
+        banner (s"Testing KMeansPlusPlusCluster object")
+        println (s"v.dim1 = ${v.dim1}")
+        println (s"v.dim2 = ${v.dim2}")
+        println (s"     k = $k")
+        if (plot) new Plot (v.col(0), v.col(1))
+        
+            
+            val statSSE = new Statistic ("sse")
+            var ok      = 0
+            for (s <- 0 until nstreams) {
+                KMeansClustering.permuteStreams (s)
+                val cl = new KMeansClustering(v, k, s)
+		cl.cluster()
+                val sse = cl.sse ()
+                // println (s"stream $s, sse = $sse")
+                statSSE.tally (sse)
+                if ((opt != -1) && (sse <= opt)) ok += 1
+            } // for
+            println (Statistic.labels)
+            println (statSSE)
+            println (s"min sse = ${statSSE.min}")
+            if (opt != -1) println (s"optimal = $ok / $nstreams")            
+        
+    } // test2
+    
+
+} // KMeansPlusPlusClutererTester
+
+
+
+object newTester extends App with KMeansPlusPlusClustererTester
+{
+    import scalation.random.{Normal, Bernoulli}
+    val coin  = Bernoulli ()
+    val dist1 = Normal (2.0, 1.0)
+    val dist2 = Normal (8.0, 1.0)
+    val v     = new MatrixD (50, 2)
+    for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
+                                        if (coin.gen == 0) dist1.gen else dist2.gen)
+    val k   = 4
+    val opt = 76         // rounded up
+
+    test (v, k, opt)
+    test2 (v, k, opt)
+
 }
