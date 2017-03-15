@@ -18,7 +18,7 @@ import scalation.random.RandomVecD
  *  of clusters for a clusterer by comparing results to a reference 
  *  distribution.
  *-----------------------------------------------------------------------------
- *  @see https://web.stanford.edu/~hastie/Papers/gap.pdf 
+ *  @see web.stanford.edu/~hastie/Papers/gap.pdf 
  */
 object GapStatistic
 {
@@ -42,30 +42,29 @@ object GapStatistic
             val zp    = new MatrixD (x.dim1, x.dim2)
             for (i <- zp.range2) {
                 val ci = xp.col(i)
-                zp.setCol(i, RandomVecD (zp.dim1, ci.max, ci.min, stream = (stream + i) % 1000).gen)
+                zp.setCol (i, RandomVecD (zp.dim1, ci.max, ci.min, stream = (stream + i) % 1000).gen)
             } // for
             ref = (zp * vt) + mean
         } else {
             for (i <- ref.range2) {
                 val ci = x.col(i)
-                ref.setCol(i, RandomVecD (ref.dim1, ci.max, ci.min, stream = (stream + i) % 1000).gen)
+                ref.setCol (i, RandomVecD (ref.dim1, ci.max, ci.min, stream = (stream + i) % 1000).gen)
             } // for
         } // if
         ref 
     } // reference
 
-
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute a sum of pairwise distances between points in each cluster (in
      *  one direction). 
-     *  @param x        the vectors/points to be clustered stored as rows of a matrix
-     *  @param cl       the `Clusterer` use to compute the distance metric 
-     *  @param clustr   the cluster assignments
-     *  @param k        the number of clusters
+     *  @param x       the vectors/points to be clustered stored as rows of a matrix
+     *  @param cl      the `Clusterer` use to compute the distance metric 
+     *  @param clustr  the cluster assignments
+     *  @param k       the number of clusters
      */
     def cumDistance (x: MatrixD, cl: Clusterer, clustr: Array[Int], k: Int): VectorD =
     {
-        val sums   = new VectorD (k)
+        val sums = new VectorD (k)
         for (i <- 0 until x.dim1-1; j <- i+1 until x.dim1 if clustr(i) == clustr(j)) {
             sums(clustr(j)) += cl.distance (x(i), x(j))
         } // for
@@ -73,11 +72,12 @@ object GapStatistic
     } // cumDistance
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Compute the within sum of squares (in one direction).
-     *  @param x        the vectors/points to be clustered stored as rows of a matrix
-     *  @param cl       the `Clusterer` use to compute the distance metric 
-     *  @param clustr   the cluster assignments
-     *  @param k        the number of clusters
+    /** Compute the within sum of squared errors in terms of distances between
+     *  between points within a cluster (in one direction).
+     *  @param x       the vectors/points to be clustered stored as rows of a matrix
+     *  @param cl      the `Clusterer` use to compute the distance metric 
+     *  @param clustr  the cluster assignments
+     *  @param k       the number of clusters
      */
     def withinSSE (x: MatrixD, cl: Clusterer, clustr: Array[Int], k: Int): Double =
     {
@@ -85,30 +85,31 @@ object GapStatistic
     } // withinSSE
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Return a `KMeansPlusPlusClusterer` clustering on the given points with
+    /** Return a `KMeansPPClusterer` clustering on the given points with
      *  an optimal number of clusters `k` chosen using the Gap statistic.
-     *  @param x        the vectors/points to be clustered stored as rows of a matrix
-     *  @param kMax     the upper bound on the number of clusters
-     *  @param algo     the reassignment aslgorithm used by `KMeansPlusPlusClusterer`
-     *  @param b        the number of reference distributions to create (default = 1)
-     *  @param useSVD   use SVD to account for the shape of the points (default = true)
-     *  @param plot     whether or not to plot the logs of the within-SSEs (default = false)
+     *  @param x       the vectors/points to be clustered stored as rows of a matrix
+     *  @param kMax    the upper bound on the number of clusters
+     *  @param algo    the reassignment aslgorithm used by `KMeansPlusPlusClusterer`
+     *  @param b       the number of reference distributions to create (default = 1)
+     *  @param useSVD  use SVD to account for the shape of the points (default = true)
+     *  @param plot    whether or not to plot the logs of the within-SSEs (default = false)
      */
-    def KMeansPlusPlus (x: MatrixD, kMax: Int, algo: Algorithm = HARTIGAN, b: Int = 1, useSVD: Boolean = true, plot: Boolean = false): (KMeansPlusPlusClusterer, Array [Int], Int) =
+    def kMeansPP (x: MatrixD, kMax: Int, algo: Algorithm = HARTIGAN, b: Int = 1, useSVD: Boolean = true,
+                  plot: Boolean = false): (KMeansPPClusterer, Array [Int], Int) =
     {
         val awk = new VectorD (kMax)
         val rwk = new VectorD (kMax)
         val gap = new VectorD (kMax)
-        val kv  = VectorD.range(1, kMax+1)
+        val kv  = VectorD.range (1, kMax+1)
         var opk = -1
-//        var opcl: KMeansPlusPlusClusterer = null
-//        var opcls: Array [Int] = null
+//      var opcl: KMeansPlusPlusClusterer = null
+//      var opcls: Array [Int] = null
 
         for (k <- 0 until kMax) {
             val ref          = GapStatistic.reference (x, useSVD)
-            val (acl, acls)  = KMeansPlusPlusClusterer.run (  x, k+1, algo)
-            val (rcl, rcls)  = KMeansPlusPlusClusterer.run (ref, k+1, algo)
-            awk(k) = log(GapStatistic.withinSSE (  x, acl, acls, k+1))
+            val (acl, acls)  = KMeansPPClusterer (x,   k+1, algo)
+            val (rcl, rcls)  = KMeansPPClusterer (ref, k+1, algo)
+            awk(k) = log(GapStatistic.withinSSE (x,   acl, acls, k+1))
             rwk(k) = log(GapStatistic.withinSSE (ref, rcl, rcls, k+1))
             gap(k) = rwk(k) - awk(k)
             if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - gap(k)*0.1)) { // TODO use stddev instead of 0.01*gap
@@ -118,16 +119,17 @@ object GapStatistic
 
         if (plot) {
             import scalation.plot.Plot
-            new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k", true)
-            new Plot (kv, gap, null, "Gap vs. k", true)
+            new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k") // , true)
+            new Plot (kv, gap, null, "Gap vs. k") // , true)
         } // if
 
-        val (cl, cls) = KMeansPlusPlusClusterer.run (x, opk, algo) // TODO used saved instead of reclustering
+        val (cl, cls) = KMeansPPClusterer (x, opk, algo) // TODO used saved instead of reclustering
         (cl, cls, opk)
 
-    } // KMeansPlusPlus
+    } // KMeansPP
 
-} // GapStatistic
+} // GapStatistic object
+
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `GapStatisticTest` object is used to test the `GapStatistic` object.
@@ -144,10 +146,12 @@ object GapStatisticTest extends App
 
     val maxK = 6
 
-    val (cl, cls, k) = GapStatistic.KMeansPlusPlus (v, maxK, useSVD = false, plot = true)
+    val (cl, cls, k) = GapStatistic.kMeansPP (v, maxK, useSVD = false, plot = true)
     println (s"  k = $k")
     println (s"sse = ${cl.sse ()}")
+
 } // GapStatisticTest
+
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `GapStatisticTest2` object is used to test the `GapStatistic` object.
@@ -167,9 +171,9 @@ object GapStatisticTest2 extends App
     for (i <- v.range1) v(i) = VectorD (if (coin.gen == 0) dist1.gen else dist2.gen,
                                         if (coin.gen == 0) dist1.gen else dist2.gen)
 
-    val (cl, cls, k) = GapStatistic.KMeansPlusPlus (v, maxK, useSVD = false, plot = true)
+    val (cl, cls, k) = GapStatistic.kMeansPP (v, maxK, useSVD = false, plot = true)
     println (s"  k = $k")
     println (s"sse = ${cl.sse ()}")
-} // GapStatisticTest2
 
+} // GapStatisticTest2
 

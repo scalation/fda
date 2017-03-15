@@ -17,21 +17,34 @@ import scalation.util.{banner, Error}
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `AffinityPropagationClusterer` class cluster several vectors/points 
- *  using the Affinity Propagation clustering technique.  
+ *  using the Adaptive Affinity Propagation clustering technique.  
  *-----------------------------------------------------------------------------
  *  @see https://en.wikipedia.org/wiki/Affinity_propagation
+ *  @see https://arxiv.org/abs/0805.1096
  *-----------------------------------------------------------------------------
  *  @param x        the vectors/points to be clustered stored as rows of a matrix
  *  @param k        the number of clusters to make
+ *  @param λ        the damping factor (default = 0.5)
  *  @param s        the random number stream (to vary the clusters made)
  */
-class AffinityPropagationClusterer (x: MatrixD, k: Int = -1, s: Int = 0)
+class AffinityPropagationClusterer (x: MatrixD, k: Int = -1, λ: Double = 0.5, s: Int = 0)
     extends Clusterer with Error
 {
     protected val DEBUG    = true                                // debug flag
     protected val n        = x.dim1
     protected val r        = new MatrixD (n, n)                  // "responsibility" matrix
     protected val a        = new MatrixD (n, n)                  // "availability" matrix
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the centroids. Should only be called after `cluster ()`. 
+     */
+    def centroids (): MatrixD = null
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Return the sizes of the centroids. Should only be called after 
+     *  `cluster ()`. 
+     */
+    def csize (): VectorI = null
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute a distance metric (distance squared) between vectors/points 'u' and 'v'.
@@ -44,43 +57,51 @@ class AffinityPropagationClusterer (x: MatrixD, k: Int = -1, s: Int = 0)
     } // distance
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Compute the similarity between any two points, such that 
-     *  `sim(u, t) > s(u, v)` iff `u` is more similar to `t` than to `v`. Here
-     *  we will use the negative squared distance.
-     *  @param u  the first vector/point
-     *  @param v  the second vector/point
+    /** Compute the similarity between any two points using the negative of the
+     *  distance metric (usually the squared Euclidean distance).
+     *  @param i  the index of the first vector/point
+     *  @param j  the index of the second vector/point
      */
-    private def sim (u: VectorD, v: VectorD): Double =
+    private def sim (i: Int, j: Int): Double =
     {
-        -distance (u, v)
-    } // distance
+        -distance (x(i), x(j))
+    } // sim
 
     private def updateR ()
     {
-        for (i <- 0 until n; j <- 0 until n) {
-            var maxe = Double.NegativeInfinity
-            for (jp <- 0 until n if jp != j) {
-                val e = a(i, jp) + sim (x(i), x(jp))
-                if (e > maxe) maxe = e
+        for (i <- 0 until n) {
+            var max1e = Double.NegativeInfinity
+            var max2e = Double.NegativeInfinity
+            var jmax  = 0
+            for (j <- 0 until n) {
+                for (jp <- 0 until n) {
+                    val e = a(i, jp) + sim (i, jp)
+                    if (e > max1e)      { max2e = max1e; max1e = e; jmax = j }
+                    else if (e > max2e) { max2e = e }
+                } // for
             } // for
-            r(i, j) = sim(x(i), x(j)) - maxe
+            for (j <- 0 until n) {
+                val maxe = if (j == jmax) max2e else max1e
+                r(i, j) = (λ * r(i, j)) + ((1.0 - λ) * (sim(i, j) - maxe))
+            } // for
         } // for
         if (DEBUG) println (s"updated r = $r")
     } // updateR
 
     private def updateA ()
     {
-        //for (i <- a.range1; j <- a.range2 if i != j) a(i, j) = min (0, r(j, j) + )
-        for (i <- 0 until n; j <- 0 until n) {
-            if (i != j) {
-                var sum = 0.0
-                for (ip <- 0 until n if ip != i && ip !=j) sum += max (0, r(ip, j))
-                a(i, j) = min (0, r(j, j) + sum)
-            } else {
-                var sum = 0.0
-                for (ip <- 0 until n if ip !=j) sum += max (0, r(ip, j))
-                a(i, j) = sum
-            } // if
+        for (i <- 0 until n) {
+            val rp  = new VectorD (n)
+            var sum = 0.0
+            for (j <- 0 until n) {
+                rp(j) = if (r(j, i) < 0 && j != i) 0 else r(j, i)
+                sum += rp(j)
+            } // for
+            for (j <- 0 until n) {
+                var newa = sum - rp(j)
+                if (newa > 0 & j != i) newa = 0
+                a(j, i) = (λ * a(j, i)) + ((1.0 - λ) * newa)
+            } // for
         } // for
         if (DEBUG) println (s"updated a = $a")
     } // updateA
@@ -94,9 +115,6 @@ class AffinityPropagationClusterer (x: MatrixD, k: Int = -1, s: Int = 0)
     {
         updateR ()
         updateA ()
-        updateR ()
-        updateA ()
-        
         null
     } // cluster
 

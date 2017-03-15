@@ -13,14 +13,13 @@ package scalation.analytics.clusterer
 import scala.collection.mutable.ListMap
 import scala.util.control.Breaks.{breakable, break}
 
-import scalation.analytics.RandomGraph
 import scalation.linalgebra.{MatrixD, VectorD, VectorI}
 //import scalation.linalgebra.SparseMatrixD
 import scalation.math.double_exp
 import scalation.util.Error
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The `MarkovClustering` class implements a Markov Clustering Algorithm 'MCL'
+/** The `MarkovClusterer` class implements a Markov Clustering Algorithm 'MCL'
  *  and is used to cluster nodes in a graph.  The graph is represented as an
  *  edge-weighted adjacency matrix (a non-zero cell indicates nodes i and j are
  *  connected).
@@ -30,26 +29,26 @@ import scalation.util.Error
  *  method must be called to convert it into a Markov transition matrix.
  *  Before normalizing, it may be helpful to add self loops to the graph.
  *  The matrix (graph or transition) may be either dense or sparse.
- *  See the `MarkovClusteringTest` object at the bottom of the file for examples.
+ *  See the `MarkovClustererTest` object at the bottom of the file for examples.
  *  @param t  either an adjacency matrix of a graph or a Markov transition matrix
  *  @param k  the strength of expansion
  *  @param r  the strength of inflation
  */
-class MarkovClustering (t: MatrixD, k: Int = 2, r: Double = 2.0)
+class MarkovClusterer (t: MatrixD, k: Int = 2, r: Double = 2.0)
       extends Clusterer with Error
 {
+    private val DEBUG    = false           // debug flag
     private val MAX_ITER = 200             // maximum number of iterations
     private val EPSILON  = 1E-7            // number close to zero
-    private val DEBUG    = false           // debug flag
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Return the centroids. Should only be called after `cluster ()`. 
+    /** Return the centroids.  Should only be called after 'cluster ()'.
      */
     def centroids (): MatrixD = throw new UnsupportedOperationException ("not applicable")
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Return the sizes of the centroids. Should only be called after 
-     *  `cluster ()`. 
+    /** Return the sizes of the centroids.  Should only be called after
+     *  'cluster ()'.
      */
     def csize (): VectorI = throw new UnsupportedOperationException ("not applicable")
 
@@ -161,14 +160,15 @@ class MarkovClustering (t: MatrixD, k: Int = 2, r: Double = 2.0)
         throw new UnsupportedOperationException ()
     } // classify
 
-} // MarkovClustering class
+} // MarkovClusterer class
 
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The `MarkovClusteringTest` object is used to test the `MarkovClustering` class.
+/** The `MarkovClustererTest` object is used to test the `MarkovClusterer` class.
  *  @see www.cs.ucsb.edu/~xyan/classes/CS595D-2009winter/MCL_Presentation2.pdf
+ ^  > run-main scalation.analytics.clusterer.MarkovClustererTest
  */
-object MarkovClusteringTest extends App
+object MarkovClustererTest extends App
 {
     import scalation.linalgebra.SparseMatrixD
 
@@ -190,7 +190,7 @@ object MarkovClusteringTest extends App
 
     println ("-----------------------------------------------------------")
     println ("g = " + g)
-    val mg = new MarkovClustering (g)
+    val mg = new MarkovClusterer (g)
     mg.addSelfLoops ()
     mg.normalize ()
     println ("result  = " + mg.processMatrix ())
@@ -214,7 +214,7 @@ object MarkovClusteringTest extends App
 
     println ("-----------------------------------------------------------")
     println ("t = " + t)
-    val mt = new MarkovClustering (t)
+    val mt = new MarkovClusterer (t)
     println ("result  = " + mt.processMatrix ())
     println ("cluster = " + mt.cluster ())
 
@@ -236,20 +236,20 @@ object MarkovClusteringTest extends App
 
 //  println ("-----------------------------------------------------------")
 //  println ("x = " + x)
-//  val mx = new MarkovClustering (x)
+//  val mx = new MarkovClusterer (x)
 //  mx.addSelfLoops ()
 //  mx.normalize ()
 //  println ("result  = " + mx.processMatrix ())
 //  println ("cluster = " + mx.cluster ())
 
-} // MarkovClusteringTest object
-
+} // MarkovClustererTest object
 
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The `MarkovClusteringTest2` object is used to test the `MarkovClustering` class.
+/** The `MarkovClustererTest2` object is used to test the `MarkovClusterer` class.
+ ^  > run-main scalation.analytics.clusterer.MarkovClustererTest2
  */
-object MarkovClusteringTest2 extends App
+object MarkovClustererTest2 extends App
 {
     // Test the MCL Algorithm on a randomly generated graph represented as an adjacency matrix.
 
@@ -257,7 +257,7 @@ object MarkovClusteringTest2 extends App
     val y  = rg.gen ()
     println ("-----------------------------------------------------------")
     val t0 = System.nanoTime ()
-    val my = new MarkovClustering (y)
+    val my = new MarkovClusterer (y)
     my.addSelfLoops ()
     my.normalize ()
     my.processMatrix ()
@@ -266,5 +266,5 @@ object MarkovClusteringTest2 extends App
     println ("-----------------------------------------------------------")
     println ("cluster = " + cluster)
 
-} // MarkovClusteringTest2 object
+} // MarkovClustererTest2 object
 

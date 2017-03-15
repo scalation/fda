@@ -20,7 +20,7 @@ import scalation.util.Error
  *  @param x  the vectors/points to be clustered stored as rows of a matrix
  *  @param k  stop when the number of clusters equals k
  */
-class HierClustering (x: MatrixD, k: Int = 2)
+class HierClusterer (x: MatrixD, k: Int = 2)
       extends Clusterer with Error
 {
     if (k >= x.dim1) flaw ("constructor", "k must be less than the number of vectors")
@@ -79,21 +79,20 @@ class HierClustering (x: MatrixD, k: Int = 2)
             for (i <- 0 until kk-1; j <- i+1 until kk) {
                 val d_ij = clustDist (clust(i), clust(j))
                 if (d_ij < minDistance) {
-                    minDistance = d_ij        // update minDistance
-                    set_i = clust(i)          // remember point sets i and j
+                    minDistance = d_ij               // update minDistance
+                    set_i = clust(i)                 // remember point sets i and j
                     set_j = clust(j)
                 } // if
             } // for
 
-            clust += (set_i | set_j)          // add the union of sets i and j
-            clust -= set_i                    // remove set i
-            clust -= set_j                    // remove set j
-            println ("cluster: (" + (kk-1) + ")  clust = " + clust)
+            clust += (set_i | set_j)                 // add the union of sets i and j
+            clust -= set_i                           // remove set i
+            clust -= set_j                           // remove set j
+            println ("cluster: (" + (kk-1) + ") clust = " + clust)
         } // for
 
-        finalClusters ()                      // make final cluster assignments
-        calcCentroids ()                      // calculate centroids for clusters
-
+        finalClusters ()                             // make final cluster assignments
+        calcCentroids ()                             // calculate centroids for clusters
         clustr
     } // cluster
 
@@ -102,8 +101,8 @@ class HierClustering (x: MatrixD, k: Int = 2)
      */
     def finalClusters ()
     {
-        for (i <- 0 until x.dim1) {                   // for each data point
-            breakable { for (c <- 0 until k) {        // find its cluster
+        for (i <- 0 until x.dim1) {                  // for each data point
+            breakable { for (c <- 0 until k) {       // find its cluster
                 if (clust(c) contains x(i)) { clustr(i) = c; break }
             }} // for
         } // for
@@ -114,12 +113,12 @@ class HierClustering (x: MatrixD, k: Int = 2)
      */
     def calcCentroids ()
     {
-        val cx = new MatrixD (k, x.dim2)    // to hold sum of vectors for each cluster
-        val cs = new VectorD (k)            // to hold number of vectors in each cluster
+        val cx = new MatrixD (k, x.dim2)             // to hold sum of vectors for each cluster
+        val cs = new VectorD (k)                     // to hold number of vectors in each cluster
         for (i <- 0 until x.dim1) {
             val ci = clustr(i)
-            cx(ci) = cx(ci) + x(i)           // add the next vector in cluster
-            cs(ci) += 1.0            // add 1 to number in cluster
+            cx(ci) = cx(ci) + x(i)                   // add the next vector in cluster
+            cs(ci) += 1.0                            // add 1 to number in cluster
         } // for
         for (c <- 0 until k) cent(c) = cx(c) / cs(c)   // divide to get averages/means
         println(s"cent = $cent")        
@@ -131,26 +130,26 @@ class HierClustering (x: MatrixD, k: Int = 2)
      */
     def classify (y: VectorD): Int =
     {
-        var dist = distance (y, cent(0))          // calc distance to centroid 0
-        var clus = 0                              // assign y to cluster 0
+        var dist = distance (y, cent(0))             // calc distance to centroid 0
+        var clus = 0                                 // assign y to cluster 0
         for (c <- 1 until k) {
-            val newDist = distance (y, cent(c))   // calc distance to centroid c
-            if (newDist < dist) {                 // is it closer than old distance
-                dist = newDist                    // make it the new distance
-                clus = c                          // assign y to cluster c
+            val newDist = distance (y, cent(c))      // calc distance to centroid c
+            if (newDist < dist) {                    // is it closer than old distance
+                dist = newDist                       // make it the new distance
+                clus = c                             // assign y to cluster c
             } // if
         } // for
         clus             
     } // classify
 
-} // HierClustering class
+} // HierClusterer class
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The `HierClusteringTest` object is used to test the `HierClustering` class.
- *  > run-main scalation.analytics.clusterer.HierClusteringTest
+/** The `HierClusterer` object is used to test the `HierClusterer` class.
+ *  > run-main scalation.analytics.clusterer.HierClustererTest
  */
-object HierClusteringTest extends App
+object HierClusterer extends App
 {
     val v = new MatrixD ((6, 2), 1.0, 2.0,
                                  2.0, 1.0,
@@ -165,21 +164,21 @@ object HierClusteringTest extends App
     println ("z = " + z)
     println ("----------------------------------------------------")
 
-    val cl = new HierClustering (v, 3)                 
+    val cl = new HierClusterer (v, 3)                 
     println ("--- final cluster = " + cl.cluster ().deep + "\n")
     println ("--- classify " + y + " = " + cl.classify (y) + "\n")
     println ("--- classify " + z + " = " + cl.classify (z) + "\n")
     println (s"sse = ${cl.sse(v)}")
 
-} // HierClusteringTest object
+} // HierClustererTest object
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The `HierClusteringTest2` object is used to test the `HierClustering` class.
- *  > run-main scalation.analytics.clusterer.HierClusteringTest2
+/** The `HierClustererTest2` object is used to test the `HierClusterer` class.
+ *  > run-main scalation.analytics.clusterer.HierClustererTest2
  */
-object HierClusteringTest2 extends App
+object HierClustererTest2 extends App
 {
-    import scalation.random.{Normal, Bernoulli}
+    import scalation.random.{Bernoulli, Normal}
     val coin  = Bernoulli ()
     val dist1 = Normal (2.0, 1.0)
     val dist2 = Normal (8.0, 1.0)
@@ -190,10 +189,9 @@ object HierClusteringTest2 extends App
     println ("v = " + v)
     println ("----------------------------------------------------")
 
-    val cl = new HierClustering (v, 4)                 
+    val cl = new HierClusterer (v, 4)                 
     println ("--- final cluster = " + cl.cluster ().deep + "\n")
     println (s"sse = ${cl.sse(v)}")
 
-} // HierClusteringTest2 object
-
+} // HierClustererTest2 object
 
