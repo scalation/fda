@@ -177,6 +177,7 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
      *  @param t  the time parameter
      */
     def apply (m: Int) (j: Int, t: Double): Double = bs (m)(j, t)
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Adjusted order 'm' B-Spline basis functions (general recurrence). These
       *  are adjusted so that the first "usable" spline is at `j = 0`. The valid
@@ -235,6 +236,23 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
         val g = (x: Double) => d2bs (m)(j, x)
         ∫ ((a, b), f * g)
     } // sigma
+
+    def penalty (m: Int = mMax) (t: VectorD): MatrixD =
+    {
+        val ns = range().size                           // number of splines
+        val Σ  = new MatrixD (ns, ns)                      // penalty matrix
+        for (i <- Σ.range1; j <- Σ.range2) Σ(i, j) = sigma ()(i, j, t)
+        Σ
+    } // penalty
+
+    def phi (m: Int = mMax) (t: VectorD): MatrixD =
+    {
+        val nt = t.dim
+        val ns = range(m).size
+        val Φ = new MatrixD (nt, ns)
+        for (i <- t.indices; j<- range(m)) Φ(i, j) = bs (m) (j, t(i))
+        Φ
+    } // phi
 
 } // B_Spline class
 
@@ -410,4 +428,56 @@ object B_SplineTest5 extends App
     println (s" Σ = $Σ")
     println (s"λΣ = ${Σ * λ}")
 } // B_SplineTest5 object
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `B_SplineTest6` object is used to test the `B_Spline` class. Here, we
+  * smooth functional data manually with a roughness penalty.
+  * @see Ramsay et al. page 86
+  * > run-main scalation.analytics.fda.B_SplineTest5
+  */
+object B_SplineTest6 extends App
+{
+    import scalation.random.Normal
+    val normal = Normal ()    
+    val mM = 4                                         // maximum order to test
+    val n  = 100                                       // number of time points
+    val G  = 5                                         // gap
+    val τ  = VectorD.range (0, n/G) / ((n-1)/G)        // knot vector (unaugmented)
+    val bs = new B_Spline (τ, mM)                      // B-Spline generator
+    val t  = VectorD.range (0, n) / n                  // time-points
+    val ns = bs.range().size                           // number of splines
+    val Σ  = bs.penalty()(t)                           // penalty matrix
+    val λ  = 0.00001                                   // regularization parameter
+
+    val y = new VectorD (n)
+    for (i <- 0 until n) y(i) = t(i) * t(i) + normal.gen
+
+    val Φ = bs.phi()(t)                                // basis matrix
+    val I = MatrixD.eye(ns)                            // identity matrix
+    val W = MatrixD.eye(n)                             // weight matrix
+    val c = ((Φ.t * W * Φ) + (Σ * λ)).inverse * Φ.t * W * y // Penalized Ridge
+    //val c = ((Φ.t * Φ) + (I * λ)).inverse * Φ.t * y         // Simple Ridge
+    //val c = (Φ.t * Φ).inverse * Φ.t * y                     // OLS
+
+    val z = new VectorD (n)                            // smoothed values
+    for (i <- 0 until n) z(i) = {
+        var sum = 0.0
+        for (j <- bs.range()) sum += c(j) * bs (mM) (j, t(i))
+        sum
+    } // for
+
+    println (s"  y = $y")
+    println (s"  λ = $λ")
+    println (s"  Σ = $Σ")
+    println (s" λΣ = ${Σ * λ}")
+    println (s" λI = ${I * λ}")
+    println (s"  Φ = $Φ")
+    println (s"Φ'Φ = ${Φ.t * Φ}")
+    println (s"  c = $c")
+    println (s"  z = $z")
+
+    import scalation.plot.Plot
+    new Plot (t, y, z, lines = true)
+
+} // B_SplineTest6 object
 
