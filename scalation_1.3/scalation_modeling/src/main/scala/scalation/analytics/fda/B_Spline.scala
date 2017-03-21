@@ -210,10 +210,11 @@ class B_Spline (ττ: VectorD, mMax: Int = 4)
     {
         import scalation.linalgebra.MatrixD
         import scalation.plot.PlotM
+        val ns  = range(m).size
         val n   = t.dim
-        val d0y = new MatrixD (τ.dim + mMax, n)                    // matrix to hold initial B-Splines
-        val d1y = new MatrixD (τ.dim + mMax, n)
-        val d2y = new MatrixD (τ.dim + mMax, n)
+        val d0y = new MatrixD (ns, n) // τ.dim + mMax, n)                    // matrix to hold initial B-Splines
+        val d1y = new MatrixD (ns, n) // τ.dim + mMax, n)
+        val d2y = new MatrixD (ns, n) // τ.dim + mMax, n)
         for (i <- 0 until n; j <- range(m)) {
             if (m > 0) d0y(j, i) =   bs (m)(j, t(i))
             if (m > 1) d1y(j, i) = d1bs (m)(j, t(i))
@@ -379,12 +380,12 @@ object B_SplineTest3 extends App
   */
 object B_SplineTest4 extends App
 {
-    val mM = 4                                               // maximum order to test
-    val n  = 100
-    val τ  = VectorD (0.0, 0.5 * (n-1), (n-1)) / (n-1)
-    val bs = new B_Spline (τ, mM)                            // B-Spline generator
-    val t  = VectorD.range (0, n) / (n-1)            // time-points for plotting
-    for (m <- 1 to mM) bs.plot (m)(t)
+    val mM = 4                                        // maximum order to test
+    val n  = 100                                      // number of time points
+    val τ  = VectorD (0.0, 0.5 * (n-1), (n-1)) / (n)  // knot vector (unaugmented)
+    val bs = new B_Spline (τ, mM)                     // B-Spline generator
+    val t  = VectorD.range (0, n) / n                 // time-points for plotting
+    for (m <- 1 to mM) bs.plot (m)(t)                 // plot
 } // B_SplineTest4 object
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -396,15 +397,16 @@ object B_SplineTest5 extends App
 {
     val mM = 4                                         // maximum order to test
     val n  = 100                                       // number of time points
-    val τ  = VectorD (0.0, 0.5 * (n-1), (n-1)) / (n-1) // knot vector (unaugmented)
+    val τ  = VectorD (0.0, 0.5 * (n-1), (n-1)) / n     // knot vector (unaugmented)
     val bs = new B_Spline (τ, mM)                      // B-Spline generator
-    val t  = VectorD.range (0, n) / (n-1)              // time-points
+    val t  = VectorD.range (0, n) / n                  // time-points
     val ns = bs.range().size                           // number of splines
     val Σ  = new MatrixD (ns, ns)                      // penalty matrix
     val λ  = 0.01                                      // regularization parameter
 
     for (i <- Σ.range1; j <- Σ.range2) Σ(i, j) = bs.sigma ()(i, j, t)
 
+    println (s" λ = $λ")
     println (s" Σ = $Σ")
     println (s"λΣ = ${Σ * λ}")
 } // B_SplineTest5 object
