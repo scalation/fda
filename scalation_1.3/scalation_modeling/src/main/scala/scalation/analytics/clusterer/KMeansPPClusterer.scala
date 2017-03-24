@@ -104,7 +104,8 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
      */
     private def initCentroids ()
     {
-        val ran1 = new Randi (0, x.dim1-1, s)                    // uniform integer distribution 
+	println(s"From initCentroids, x: $x")
+        val ran1 = new Randi (0, x.dim1-1, s)                    // uniform integer distribution
         cent(0)  = x(ran1.igen)                                  // pick first centroid uniformly at random
         for (i <- 1 until k) {                                   // pick remaining centroids
             updatePDF ()                                         // update probability distribution
@@ -271,8 +272,38 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
     /** Given a new point/vector y, determine which cluster it belongs to.
      *  @param y  the vector to classify
      */
-    def classify (y: VectorD): Int = 0 // TODO fix
+    def classify (y: VectorD): Int =
+    {
+	var cluster = 0
+      	var d = Double.PositiveInfinity
+	for(i <- cent.range1 ){
+	      if (distance( y, cent(i) ) < d ) {
+	          cluster = i
+	          d = distance( y, cent(i) )
+	      }// if
+	}// for	
+	cluster
+    }// classify
 
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Given a new point/vector y and a set of hypothetical centroids,
+     *  determine which cluster it would belong to.
+     *  @param y  the vector to classify
+     */
+    def classify2 (y: VectorD, cents: MatrixD): Int =
+    {
+	var cluster = 0
+      	var d = Double.PositiveInfinity
+	for(i <- cents.range1 ){
+	      if (distance( y, cents(i) ) < d ) {
+	          cluster = i
+	          d = distance( y, cents(i) )
+	      }// if
+	}// for	
+	cluster
+    }// classify2
+    
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute the sum of squared errors (distance squared) from all points in
      *  cluster 'c' to the cluster's centroid.
@@ -378,11 +409,12 @@ trait KMeansPPClustererTester
                 // println (s"stream $s, sse = $sse")
                 statSSE.tally (sse)
                 if ((opt != -1) && (sse <= opt)) ok += 1
+		
             } // for
             println (Statistic.labels)
             println (statSSE)
             println (s"min sse = ${statSSE.min}")
-            if (opt != -1) println (s"optimal = $ok / $nstreams")            
+            if (opt != -1) println (s"optimal = $ok / $nstreams")
         } // for 
     } // test
 
@@ -405,6 +437,7 @@ trait KMeansPPClustererTester
                 // println (s"stream $s, sse = $sse")
                 statSSE.tally (sse)
                 if ((opt != -1) && (sse <= opt)) ok += 1
+		
             } // for
             println (Statistic.labels)
             println (statSSE)
@@ -413,8 +446,58 @@ trait KMeansPPClustererTester
         } // for 
     } // test2
 
+def test3 (v: MatrixD, k: Int, opt: Double = -1, plot: Boolean = false, nstreams: Int = 10)
+    {
+        banner (s"Testing KMeansPlusPlusCluster classify() method")
+        println (s"v.dim1 = ${v.dim1}")
+        println (s"v.dim2 = ${v.dim2}")
+        println (s"     k = $k")
+        if (plot) new Plot (v.col(0), v.col(1))
+
+	
+	val points = Array(Array(1.5,1.5),
+	    	           Array(4.5,4.5),
+			   Array(8.5,8.5))
+
+        for (algo <- Algorithm.values) {
+            banner (s"test2 (algo = $algo)")
+            var ok      = 0
+            for (s <- 0 until nstreams) {
+                KMeansPPClusterer.permuteStreams (s)
+                val (cl, cls)  = KMeansPPClusterer (v, k, algo)
+                checkEmpty (cls, k)
+		println(s"cls: ${cls.deep}")
+		for( i <- points.indices ){
+	     	    var point = new VectorD(2,points(i))
+	     	    println(s"point: ${points(i).deep}, cl.classify(point): ${cl.classify(point)}") 
+		}
+            } // for
+        } // for 
+    } // test3
+
+    
 } // KMeansPlusPlusClutererTester
 
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPPClassifyTest` object is used to test the `KMeansPlusPlusCluterer`
+ *  class.
+ *  > run-main scalation.analytics.clusterer.KMeansPPClassifyTest
+ */
+object KMeansPPClassifyTest
+       extends App with KMeansPPClustererTester
+{
+    val v  = new MatrixD ((6, 2), 1.0, 2.0,
+                                  2.0, 1.0,
+                                  5.0, 4.0,
+                                  4.0, 5.0,
+                                  9.0, 8.0,
+                                  8.0, 9.0)
+    val k   = 3
+    val opt = 3.0
+    test3 (v, k, opt)
+    
+    
+} // KMeansPPClassifyTest
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `KMeansPPClustererTest` object is used to test the `KMeansPlusPlusCluterer`
@@ -434,9 +517,9 @@ object KMeansPPClustererTest
     val opt = 3.0
     test (v, k, opt)
     test2 (v, k, opt)
-
+    
+    
 } // KMeansPlusplusclustererTest
-
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `KMeansPPClustererTest2` object is used to test the `KMeansPlusPlusCluterer`
@@ -513,4 +596,53 @@ object KMeansPPClustererTest4
     test2 (v, k, opt)
 
 } // KMeansPlusplusclustererTest4
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPPClustererTest5` object is used to test the `KMeansPlusPlusCluterer`
+ *  class.
+ *  > run-main scalation.analytics.clusterer.KMeansPPClustererTest5
+ */
+object KMeansPPClustererTest5
+       extends App with KMeansPPClustererTester
+{
+
+	val v = new MatrixD ((7, 2), 1.0, 2.0,
+                                 2.0, 1.0,
+                                 5.0, 4.0,
+                                 4.0, 5.0,
+                                 9.0, 8.0,
+                                 8.0, 9.0,
+				 19.0, 32.0)
+	val k = 3
+	var minSSE = Double.PositiveInfinity
+	var outlier = -1
+	for (i <- v.range1) {
+	     val vNew = v.sliceExclude(i,v.dim2)
+	     KMeansPPClusterer.permuteStreams (i%1000)
+             val (cl, cls)  = KMeansPPClusterer (vNew, k)
+             val sse = cl.sse ()
+	     if (sse < minSSE ) {minSSE = sse;outlier=i;println("found new outlier")}
+	} // for
+	println(s"outlier: $outlier, minSSE: $minSSE")
+} // KMeansPPClustererTest5
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `KMeansPPClustererTest6` object is used to test the `KMeansPlusPlusCluterer`
+ *  class.
+ *  > run-main scalation.analytics.clusterer.KMeansPPClustererTest6
+ */
+object KMeansPPClustererTest6
+       extends App with KMeansPPClustererTester
+{
+
+
+    import scalation.linalgebra.MatrixD
+    val v = MatrixD ("../data/gene_expression.csv")
+
+    //val str = " 3.92E+01"
+
+    println (v)
+
+} // KMeansPPClustererTest6
 

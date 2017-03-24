@@ -18,6 +18,8 @@ import scalation.linalgebra.MatrixD
 import scalation.random.RandomVecSample
 import scalation.util.SortingI
 
+import Algorithm._
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `TightClusterer` class uses tight clustering to eliminate points that
  *  do not not fit well in any cluster.
@@ -31,24 +33,40 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 {
     private val DEBUG = true                                  // debug flag
     private val ratio = 0.7                                   // subsampling ratio
-    private val alpha = 0.5                                   // how far below 1 to set threshold
+    private val alpha = 0.2                                   // how far below 1 to set threshold
     private val thres = 1 - alpha                             // membership threshold for high scores
-    private val beta  = 0.7                                   // similarity threshold
-    private val b     = 10                                    // number of times to resample
+    private val beta  = 0.9                                   // similarity threshold
+    private val b     = 20                                    // number of times to resample
     private val q     = 7                                     // number of candidates for each k
     private val n     = x.dim1                                // size of whole sample/population
-    private val ns    = (x.dim1 * ratio).toInt                // size of a random subsample
-    private val sr    = 0 until ns                            // sample range
-    private val rsg   = RandomVecSample (x.dim1, ns, s)       // random sample generator
+    private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create a new reandom subsample.
      */
     def createSubsample (): (MatrixD, Array [Int]) =
     {
-        val indexMap = rsg.igen ().toArray                    // select e.g., 5, 3, 7  // FIX - why toArray
-        val subsamp  = x.selectRows (indexMap)                // generate random subsample
-        println (s"subsamp = $subsamp")
+	val nn	  = avail.count(_ == true)		      // the number of available rows (i.e. - rows which haven't been tight clustered yet...)
+   	val ns    = (nn * ratio).toInt			      // size of a random subsample
+	//println(s"From subsamp ns: $ns")
+    	val sr    = 0 until ns                                // sample range
+	val strm  = (System.currentTimeMillis % 1000).toInt
+    	val rsg   = RandomVecSample (nn, ns, strm)	      // random sample generator
+	
+        val indexMap = rsg.igen ().toArray                    // select e.g. 5th, 3rd, 7th  // FIX - why toArray
+	//print(s"indexMap: ${indexMap.deep}")
+	val subsamp  = new MatrixD(indexMap.length,x.dim2)    // a matrix to hold the specified vectors from the positions specified by indexMap 
+	val arrayMap = avail.zipWithIndex.map{case (e,i) =>
+	    	       			  if(e) i else -1}.filterNot(_ == -1) 	// the indices of the rows specified in indexMap e.g. 5th => index 7, 3rd => 3, 7th => 9
+        //val subsamp  = x.selectRows (arrayMap)                    	 	// generate random subsample
+	//println(s"arrayMap: ${arrayMap.deep}") 
+	for( i <- subsamp.range1 ) {
+	    //println(s"i: $i")
+	    //println(s"indexMap(i): ${indexMap(i)}")
+	    //println(s"arrayMap(indexMap(i)): ${arrayMap(indexMap(i))}")
+	    subsamp(i) = x(arrayMap(indexMap(i)))    	// fill the subsamp with the rows from x specified by arrayMap e.g. x(5), x(7), x(9)
+	}
+        //println (s"subsamp = $subsamp")
         (subsamp, indexMap) 
     } // createSubsample
 
@@ -57,20 +75,35 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def computeMeanComembership (k: Int): MatrixD =
     {
-        val md = new MatrixD (n, n)                           // mean comembership matrix
+	val unclustered = avail.count(_ == true)
+    	val nn	  = (unclustered * ratio).toInt 
+	//println(s"nn: $nn")
+        val md      = new MatrixD (n, n)                           // mean comembership matrix
+	val clustr2 = Array.ofDim[Int](n)			   // to hold the future clustering of our data classified by centroids of some subset sample clustering
         for (l <- 0 until b) {
-            println (s"\n iteration l = $l")
+            //println (s"\n iteration l = $l")
             val (y, imap) = createSubsample ()                // create a new subsample
-            val kmc    = new KMeansPPClusterer (y, k, s = s)  // apply clustering to this subsample
-            val clustr = kmc.cluster ()                       // get the clusters
-            println (s"clustr = ${clustr.deep}")
 
+
+                KMeansPPClusterer.permuteStreams ((s+l)%1000)
+                val (kmc, clustr)  = KMeansPPClusterer (y, k)
+/*
+	    val kmc	  = new KMeansPPClusterer(y,k,s=s)
+            val clustr 	  = kmc.cluster ()                       // get the clusters*/
+	    val cents 	  = kmc.centroids()
+            //println (s"clustr = ${clustr.deep}, cents: $cents")
+	    for (i <- x.range1 ) clustr2(i) = if( avail(i) ) kmc.classify2(x(i), cents) else -1
+	    println(s"clustr2: ${clustr2.deep}")
             val d = new MatrixD (n, n)                        // comembership matrix for current sample
-            for (i <- sr; j <- sr if clustr(i) == clustr(j)) d(imap(i), imap(j)) = 1.0
-            println (s"d = $d")
+            for (i <- x.range1; j <- x.range1 if (clustr2(i) == clustr2(j) && clustr2(i) >= 0)) {
+	    	//println(s"i: $i")
+		//println(s"j: $j")
+	        d(i, j) = 1.0
+	    }
+            //println (s"d = $d")
             md += d 
         } // for
-        md /= ratio * b                                       // compute mean
+        md /= b // ratio * b                                       // compute mean
         md                                                    // return result
     } // computeMeanComembership
 
@@ -81,13 +114,15 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def formCandidateClusters (md: MatrixD): ArrayBuffer [Set [Int]] =
     {
-        val avail = Array.fill (n)(true)                      // whether a point is available
+	//println(s"From formCandidateClusters, n: $n")
+	// I don't think we should be using the available list here...
+        //val avail = Array.fill (n)(true)                      // whether a point is available
         val clubs = new ArrayBuffer [Set [Int]] ()            // list of clubs
-        for (i <- 0 until n if avail(i)) {
+        for (i <- 0 until md.dim1 if avail(i)) {
             val club = Set (i)                                // put i in a club
-            avail(i) = false                                  // make i unavailable
-            for (j <- i until n if md(i, j) >= thres) { club += j; avail(j) = false }
-            clubs += club
+            //avail(i) = false                                  // make i unavailable
+            for (j <- i until md.dim1 if ( avail(i) && md(i,j) >= thres )) { club += j}//; avail(j) = false }
+            if( club.size > 1 ) clubs += club
         } // for
         clubs
     } // formCandidateClusters
@@ -150,8 +185,8 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     {
         for (lev <- 0 until topClubs.length-1) {
             for (c1 <- topClubs (lev); c2 <- topClubs (lev+1)) {
-                if (sim (c1, c2) >= beta) return (lev, c1)        // found a stable cluster
-            } // for
+                if (sim (c1, c2) >= beta) return (lev+1, c2)        // found a stable cluster
+            } // for	     	    	  	       		  
         } // for
         return (-1, null)                                         // none found
     } // findStable
@@ -163,12 +198,16 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def cluster (): ArrayBuffer [Set [Int]] =
     {
+	var done    = false
         val levels   = 2                                          // number of levels to try
         val clusters = new ArrayBuffer [Set [Int]] ()
         val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
         for (kc <- k0 to kmin by -1) {                            // iteratively decrement kc (k current value)
+	    //println(s"kc : $kc")
+	    if( avail.count( _ == true ) == 1 )done = true
+	    if( !done )
             for (k <- kc until kc + levels) {
-                val (clubs, order) = selectCandidateClusters (k0)
+                val (clubs, order) = selectCandidateClusters (k)
                 topClubs(k-kc) = pickTopQ (clubs, order)
             } // for
             println (s"topClubs = ${topClubs.deep}")
@@ -176,9 +215,12 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
             println (s"(lev, stable) = ($lev, $stable)")
             if (lev >= 0) {
                 clusters      += stable                           // add to stable clusters
-                topClubs(lev) -= stable                           // remove from top clubs
+                //topClubs(lev) -= stable                           // remove from top clubs (WHY?)
+		for( i <- topClubs ) i.clear()
+		for( i <- stable ) avail(i) = false
+		if( avail.count(_ == true ) == 0 ) done = true
             } else {
-                println ("no stable cluster found for kc = $kc: $stable")
+                println (s"no stable cluster found for kc = $kc: $stable")
             } // if
         } // for
         println (s"clusters = $clusters")
@@ -194,17 +236,20 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
  */
 object TightClustererTest extends App
 {
-    val v = new MatrixD ((6, 2), 1.0, 2.0,
+    val v = new MatrixD ((7, 2), 1.0, 2.0,
                                  2.0, 1.0,
                                  5.0, 4.0,
                                  4.0, 5.0,
                                  9.0, 8.0,
-                                 8.0, 9.0)
+                                 8.0, 9.0,
+				 19.0, 32.0)
 
-   val (k0, kmin) = (5, 3)
+   val (k0, kmin) = (5,1)
    for (s <- 0 until 5) {
+       println(s"\n\n\n//::::::::::::::::::::::::::\nTight Cluster test for s = $s\n//::::::::::::::::::::::::::\n\n\n")
        val tcl = new TightClusterer (v, k0, kmin, s)
-       tcl.cluster ()
+       val clust = tcl.cluster ()
+       assert(!clust.flatten.contains(6))
    } // for
 
 } // TightClustererTest object
