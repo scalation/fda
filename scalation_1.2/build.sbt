@@ -54,3 +54,8 @@ libraryDependencies += "dk.brics.automaton" % "automaton" % "1.11-8"
 
 // libraryDependencies += "org.jsoup" % "jsoup" % "1.8.2"
 
+
+////////////////////////////////////////////////////////////////////////////////
+// CSVWriter
+
+libraryDependencies += "com.opencsv" % "opencsv" % "3.9"

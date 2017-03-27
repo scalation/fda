@@ -49,8 +49,8 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 // Unit Testing
 
 libraryDependencies += "junit" % "junit" % "4.11" % "test",
-libraryDependencies += "com.novocode" % "junit-interface" % "0.8" % "test->default"
-
+libraryDependencies += "com.novocode" % "junit-interface" % "0.8" % "test->default",
+libraryDependencies += "org.apache.commons" % "commons-math3" % "3.6.1"
 ) // root
 //).dependsOn (mathstat) // root
 
