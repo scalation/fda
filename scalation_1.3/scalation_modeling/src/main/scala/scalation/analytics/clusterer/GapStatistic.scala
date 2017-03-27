@@ -94,33 +94,47 @@ object GapStatistic
      *  @param useSVD  use SVD to account for the shape of the points (default = true)
      *  @param plot    whether or not to plot the logs of the within-SSEs (default = false)
      */
-    def kMeansPP (x: MatrixD, kMax: Int, algo: Algorithm = HARTIGAN, b: Int = 1, useSVD: Boolean = true,
-                  plot: Boolean = false): (KMeansPPClusterer, Array [Int], Int) =
+    def kMeansPP (x: MatrixD, kMax: Int, algo: Algorithm = HARTIGAN,
+    		       	b: Int = 10, useSVD: Boolean = true, plot: Boolean = false): (KMeansPPClusterer, Array [Int], Int) =
     {
-        val awk = new VectorD (kMax)
-        val rwk = new VectorD (kMax)
-        val gap = new VectorD (kMax)
-        val kv  = VectorD.range (1, kMax+1)
-        var opk = -1
-//      var opcl: KMeansPlusPlusClusterer = null
-//      var opcls: Array [Int] = null
+        val awk  = new VectorD (kMax)
+        val rwk  = new VectorD (kMax)
+        val gap  = new VectorD (kMax)
+	val sdks = new VectorD (kMax)
+        val kv   = VectorD.range(1, kMax+1)
+        var opk  = -1
 
         for (k <- 0 until kMax) {
-            val ref          = GapStatistic.reference (x, useSVD)
-            val (acl, acls)  = KMeansPPClusterer (x,   k+1, algo)
-            val (rcl, rcls)  = KMeansPPClusterer (ref, k+1, algo)
-            awk(k) = log(GapStatistic.withinSSE (x,   acl, acls, k+1))
-            rwk(k) = log(GapStatistic.withinSSE (ref, rcl, rcls, k+1))
-            gap(k) = rwk(k) - awk(k)
-            if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - gap(k)*0.1)) { // TODO use stddev instead of 0.01*gap
+
+	    val rwks = new VectorD (b)						// to store the b many reference distribution w vals
+	    val sdks = new VectorD (b)						// to store the b many sd's for each ref dist from the estimated expected val
+	    for (l <- 0 until b){  						
+	    	var ref = GapStatistic.reference (x, useSVD)			// create b many reference distributions for this data 
+	    	val (rcl, rcls)  = KMeansPPClusterer (ref, k+1, algo) // compute and store the log of the withinSSE for each ref distribution
+		rwks(l) = log(GapStatistic.withinSSE ( ref, rcl, rcls, k+1 ))	// aggregate the withinSSE for each ref distribution to estimate the expected withinSSE
+		rwk(k) += rwks(l)
+	    } // for
+	    rwk(k) /= b								// The final estimated expected withinSSE for this data set
+
+	    for( l <- 0 until b){						// compute the sd of the ref dist's from the final estimated expected value
+	    	 sdks(k) += Math.pow(rwks(l)-rwk(k),2)	    	 
+	    } // for
+	    sdks(k) /= b							
+	    sdks(k) = Math.pow(sdks(k),1/2)					// the final value for the sd of the ref dist's
+	    
+            val (acl, acls)  = KMeansPPClusterer (  x, k+1, algo)	// calculate the actuale KMeansPlusPlus Clustering for the data for k many clusters 
+            awk(k) = log(GapStatistic.withinSSE (  x, acl, acls, k+1))		// find the withinSSE for the k-clustering for the real data 
+            gap(k) = rwk(k) - awk(k)		      	   	 		// the gap statistic for this k value
+	    
+            if ((k != 0) && (opk == -1) && (gap(k-1) >= gap(k) - sdks(k))) {  
                 opk = k
             } // if
         } // for
 
         if (plot) {
             import scalation.plot.Plot
-            new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k") // , true)
-            new Plot (kv, gap, null, "Gap vs. k") // , true)
+            new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k", true)
+            new Plot (kv, gap, null, "Gap vs. k", true)
         } // if
 
         val (cl, cls) = KMeansPPClusterer (x, opk, algo) // TODO used saved instead of reclustering
