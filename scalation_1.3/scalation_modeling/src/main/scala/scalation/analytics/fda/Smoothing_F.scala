@@ -192,24 +192,37 @@ object Smoothing_FTest extends App
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `Smoothing_FTest2` is used to test the `Smoothing_F` class.
- *  > run-main scalation.analytics.fda.Smoothing_FTest
+ *  > run-main scalation.analytics.fda.Smoothing_FTest2
  */
 object Smoothing_FTest2 extends App
 {
     import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer}
 
-    println ("Loading observed data...")    
+    val ord  = 4                            // b-spline order
+    val kMax = 30                           // maximum number of clusters
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* LOAD DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    println ("Loading observed data...")
     val data = MatrixD ("../data/gene_expression.csv")  // observed data
 
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PREPARE DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    println ("Preparing data...")
     val x = data //.slice (0, 1000)
+    val z = new MatrixD (x.dim1, x.dim2)    // matrix for smoothed sample
+    val t = VectorD.range (0, x.dim2)       // vector for time points
+    val c = new MatrixD (x.dim1, x.dim2)    // matrix for smoothing spline coefficients
 
-    val z    = new MatrixD (x.dim1, x.dim2)             // smoothed sample
-    val t    = VectorD.range (0, 12)                    // time points
-    val ord  = 4                                        // b-spline order
-    val c    = new MatrixD (x.dim1, x.dim2)
-    val kMax = 30
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM SMOOTHING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-    println ("Smoothing observed data...")
+    println ("Smoothing...")
     for (i <- x.range1) {
         val y   = x(i)
         val moo = new Smoothing_F (y, t, null, ord, lambda = -1) // smoother
@@ -217,6 +230,10 @@ object Smoothing_FTest2 extends App
         z(i)    = moo.predict (t)                                // predict for all time points
         //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
     } // for
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM KMEANS++ CLUSTERING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     val sseObs = new VectorD (kMax)
     val sseSmo = new VectorD (kMax)
@@ -240,7 +257,13 @@ object Smoothing_FTest2 extends App
         println ()
     } // for
 
-    new Plot (kVals, sseObs, sseSmo, "SSEs: Observed vs. Smoothed", true)
-    new Plot (kVals, sseObs.map(math.log _), sseSmo.map(math.log _), "log SSEs: Observed vs. Smoothed", true)
+    new Plot (kVals, sseObs, sseSmo, "k-means++ SSEs: Observed vs. Smoothed", true)
+    new Plot (kVals, sseObs.map(math.log _), sseSmo.map(math.log _), "k-means++ log SSEs: Observed vs. Smoothed", true)
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM TIGHT CLUSTERING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    // TODO implement
 
 } // Smoothing_FTest2
