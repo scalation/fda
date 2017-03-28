@@ -13,7 +13,7 @@ import java.io.PrintWriter
 
 import scala.io.Source.fromFile
 
-import scala.math.{abs => ABS}
+import scala.math.{abs => ABS, sqrt}
 
 import scalation.math.{double_exp, oneIf}
 import scalation.math.ExtremeD.TOL
@@ -1491,6 +1491,15 @@ class MatrixD (d1: Int,
     /** Create a normalized version of 'this' matrix.
       */
     def normalizeU: MatrixD = MatrixD (for (j <- range2) yield col(j).normalizeU)
+
+    /** Compute the Frobenius norm.
+     */
+    def norm: Double =
+    {
+        var sum = 0.0
+        for (i <- range1) sum += this(i).normSq
+        sqrt (sum)
+    } // norm
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute the determinant of 'this' matrix.  The value of the determinant

@@ -104,7 +104,7 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
      */
     private def initCentroids ()
     {
-	println(s"From initCentroids, x: $x")
+	if (DEBUG) println(s"From initCentroids, x: $x")
         val ran1 = new Randi (0, x.dim1-1, s)                    // uniform integer distribution
         cent(0)  = x(ran1.igen)                                  // pick first centroid uniformly at random
         for (i <- 1 until k) {                                   // pick remaining centroids
@@ -635,14 +635,23 @@ object KMeansPPClustererTest5
 object KMeansPPClustererTest6
        extends App with KMeansPPClustererTester
 {
-
-
     import scalation.linalgebra.MatrixD
-    val v = MatrixD ("../data/gene_expression.csv")
+    import scalation.stat.Statistic
 
-    //val str = " 3.92E+01"
+    val stat = new Statistic ("SSE")
+    val v = MatrixD ("../data/tclust.csv")
+    val k = 3
 
-    println (v)
+    for (s <- 0 until 10) {
+        val cl  = new KMeansPPClusterer (v, k, s = s)
+        val cls = cl.cluster ()
+        val sse = cl.sse ()
+        println ("sse = $sse")
+        stat.tally (sse)
+    } // for
+
+    println (Statistic.labels)
+    println (stat)
 
 } // KMeansPPClustererTest6
 

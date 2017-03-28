@@ -45,8 +45,8 @@ import SmoothingMethod._
 class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: Int = 4, method: SmoothingMethod = RIDGE, lambda: Double = 1E-5)
       extends Error
 {
-    private val DEBUG = true                   // debug flag
-    private val GAP   = 5                      // gap between time points and knots
+    private val DEBUG = false                   // debug flag
+    private val GAP   = 2                      // gap between time points and knots
     private val m     = t.dim                  // number of data time points
     if (τ == null) τ  = makeKnots
     private val n     = τ.dim                  // number of time points for the knots
@@ -61,6 +61,15 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     private var c: VectoD = null               // coefficient vector
     private var e: VectoD = null               // residual/error vector    
     private var sse   = 0.0                    // sum of squared error
+
+    def summary
+    {
+        println (s"size of λΣ  = ${λopt * Σ.norm}")
+        println (s"size of Φ'Φ = ${(Φ.t * Φ).norm}")
+        println (s"ratio       = ${(λopt * Σ.norm) / (Φ.t * Φ).norm}")
+    } // summary
+
+    def getLambda = λopt
 
     if (y.dim != m) flaw ("constructor", "require # data points == # data time points")
     if (n > m)      flaw ("constructor", "require # knot points <= # data time points")
@@ -110,7 +119,11 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
      */
     private def gcv (λ: Double): Double =
     {
-        (ns / (ns - df (λ))) * (sse / (ns - df (λ)))
+        val obj = (m / (m - df (λ))) * (sse / (m - df (λ)))
+        //println (s"λ = $λ; ns = $ns; m = $m; df = ${df(λ)}; sse = $sse; obj = $obj")
+        // (ns / (ns - df (λ))) * (sse / (ns - df (λ)))
+        // (m / (m - df (λ))) * (sse / (m - df (λ)))
+        obj 
     } // gcv
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -128,9 +141,9 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
             gcv (l)
         } // f
         val gs   = new GoldenSectionLS (f)
-        val step = 100
+        val step = 10
         λopt     = gs.search (step)
-        if (DEBUG) println (s"λopt = $λopt")
+        //if (DEBUG) println (s"λopt = $λopt")
     } // useGCV
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -164,15 +177,70 @@ object Smoothing_FTest extends App
     val t = VectorD.range (0, 100) / 100.0                           // time points
     val y = t.map ((x: Double) => 3.0 + 2.0 * x * x + normal.gen)    // raw data points
 
-    for (ord <- 2 to 10) {
+    for (ord <- 4 to 4) {
         val τ   = null                                               // let `Smoothing_F` nake the knots
-        val moo = new Smoothing_F (y, t, τ, ord)                    // smoother
+        val moo = new Smoothing_F (y, t, τ, ord, lambda = -1)                    // smoother
         val c   = moo.train ()                                       // train -> set coefficients
         println (s"y = $y \nt = $t \nc = $c")
         val x = moo.predict (t)                                      // predict for all time points
-        new Plot (t, y, x, s"B-Spline Fit: ord = $ord")
+        new Plot (t, y, x, s"B-Spline Fit: ord = $ord; λ = ${moo.getLambda}")
+        moo.summary
     } // for
 
 } // Smoothing_FTest object
 
 
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `Smoothing_FTest2` is used to test the `Smoothing_F` class.
+ *  > run-main scalation.analytics.fda.Smoothing_FTest
+ */
+object Smoothing_FTest2 extends App
+{
+    import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer}
+
+    println ("Loading observed data...")    
+    val data = MatrixD ("../data/gene_expression.csv")  // observed data
+
+    val x = data //.slice (0, 1000)
+
+    val z    = new MatrixD (x.dim1, x.dim2)             // smoothed sample
+    val t    = VectorD.range (0, 12)                    // time points
+    val ord  = 4                                        // b-spline order
+    val c    = new MatrixD (x.dim1, x.dim2)
+    val kMax = 30
+
+    println ("Smoothing observed data...")
+    for (i <- x.range1) {
+        val y   = x(i)
+        val moo = new Smoothing_F (y, t, null, ord, lambda = -1) // smoother
+        c(i)    = moo.train ()                                   // train -> set coefficients
+        z(i)    = moo.predict (t)                                // predict for all time points
+        //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
+    } // for
+
+    val sseObs = new VectorD (kMax)
+    val sseSmo = new VectorD (kMax)
+    val kVals  = VectorD.range (1, kMax + 1)
+
+    println ("Clustering... ")
+    for (k <- 1 to kMax) {
+        print (s"k = $k; ")
+        //val (cl1, cls1) = KMeansPPClusterer (x, k)
+        val cl1  = new KMeansPPClusterer (x, k)
+        val cls1 = cl1.cluster ()
+        val sse1 = cl1.sse ()
+        sseObs (k-1) = sse1
+        print (s"observed SSE = $sse1; ")
+        //val (cl2, cls2) = KMeansPPClusterer (z, k)
+        val cl2  = new KMeansPPClusterer (z, k)
+        val cls2 = cl2.cluster ()
+        val sse2 = cl2.sse ()
+        sseSmo (k-1) = sse2        
+        print (s"smoothed SSE = $sse2")
+        println ()
+    } // for
+
+    new Plot (kVals, sseObs, sseSmo, "SSEs: Observed vs. Smoothed", true)
+    new Plot (kVals, sseObs.map(math.log _), sseSmo.map(math.log _), "log SSEs: Observed vs. Smoothed", true)
+
+} // Smoothing_FTest2

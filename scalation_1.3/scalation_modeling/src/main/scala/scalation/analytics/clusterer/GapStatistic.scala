@@ -105,7 +105,6 @@ object GapStatistic
         var opk  = -1
 
         for (k <- 0 until kMax) {
-
 	    val rwks = new VectorD (b)						// to store the b many reference distribution w vals
 	    val sdks = new VectorD (b)						// to store the b many sd's for each ref dist from the estimated expected val
 	    for (l <- 0 until b){  						
@@ -131,12 +130,15 @@ object GapStatistic
             } // if
         } // for
 
+        assert (opk != -1, "GapStatistic: no optimal k found!")
+
         if (plot) {
             import scalation.plot.Plot
             new Plot (kv, awk, rwk, "Actual wSSE and Reference wSSE vs. k", true)
             new Plot (kv, gap, null, "Gap vs. k", true)
         } // if
 
+        KMeansPPClusterer.permuteStreams (opk)
         val (cl, cls) = KMeansPPClusterer (x, opk, algo) // TODO used saved instead of reclustering
         (cl, cls, opk)
 

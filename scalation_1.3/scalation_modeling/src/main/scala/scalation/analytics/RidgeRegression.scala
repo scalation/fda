@@ -44,7 +44,7 @@ import RegTechnique._
  *  @param lambda     the shrinkage parameter (0 => OLS) in the penalty term 'lambda * b dot b'
  *  @param technique  the technique used to solve for b in x.t*x*b = x.t*y
  */
-class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: RegTechnique = Inverse)
+class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: RegTechnique = Inverse, penalty: MatrixD = null)
       extends Predictor with Error
 {
     if (y != null && x.dim1 != y.dim) flaw ("constructor", "dimensions of x and y are incompatible")
@@ -72,10 +72,25 @@ class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: 
         case _        => (xtx).inverse * x.t                    // classic textbook technique
     } // match
 
+    var sse = 0.0
+
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute x.t * x and add lambda to the diagonal
      */
-    def xtx: MatrixD = { val a = x.t * x; for (i <- 0 until a.dim1) a(i, i) += lambda; a }
+    def xtx: MatrixD = {
+        val a = x.t * MatrixD.eye(x.dim1) * x;
+//        val w = MatrixD.eye(a.dim2)
+        if (penalty == null) {
+            for (i <- 0 until a.dim1) a(i, i) += lambda;
+        } else {
+            //for (i <- 0 until a.dim1) a(i, i) += lambda * penalty(i, i);            
+            for (i <- a.range1; j <- a.range2) {
+                a(i, j) += penalty(i, j) // lambda * penalty(i, j)
+            } // for
+        } // if
+        println (s"xtx = $a")
+        a
+    } // xtx
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Train the predictor by fitting the parameter vector (b-vector) in the
@@ -88,7 +103,7 @@ class RidgeRegression (x: MatrixD, y: VectorD, lambda: Double = 0.1, technique: 
         b        = if (x_pinv == null) fac.solve (y).asInstanceOf [VectorD]   // FIX
                    else x_pinv * y                              // x parameter vector [b_1, ... b_k]
         val e    = y - x * b                                    // residual/error vector
-        val sse  = e dot e                                      // residual/error sum of squares
+        sse  = e dot e                                      // residual/error sum of squares
         val sst  = (y dot y) - pow (y.sum, 2) / m               // total sum of squares
         val ssr  = sst - sse                                    // regression sum of squares
         rSquared = ssr / sst                                    // coefficient of determination (R-squared)
