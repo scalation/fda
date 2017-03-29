@@ -42,7 +42,7 @@ import SmoothingMethod._
  *  @param method  the smoothing method
  *  @param lambda  the regularization parameter (>= 0 or -1 to use GCV) 
  */
-class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: Int = 4, method: SmoothingMethod = RIDGE, lambda: Double = 1E-5)
+class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: Int = 4, method: SmoothingMethod = ROUGHNESS, lambda: Double = 1E-5)
       extends Error
 {
     private val DEBUG = false                   // debug flag
