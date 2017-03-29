@@ -77,22 +77,25 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     private def makeKnots: VectorD = VectorD.range (0, m/GAP) / ((m-1)/GAP) * t(t.dim-1)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Find the estimated coefficients for the model using one of several
-     *  training methods.
+    /** Find the partial fit for the model using one of several training 
+     *  methods. If you multitply the training data by this `MatrixD`, then you
+     *  get the symmetric "hat" matrix. If you multitply this `MatrixD` by the
+     *  response vector, then you will get the vector estimated model
+     *  coefficients.
      *  @param λ  the regularization parameter
      */
-    private def findc (λ: Double): MatrixD = method match {
+    private def pfit (λ: Double): MatrixD = method match {
         case ROUGHNESS => ((Φ.t * W * Φ) + (Σ * λ)).inverse * Φ.t * W
         case RIDGE     => ((Φ.t * W * Φ) + (I * λ)).inverse * Φ.t * W
         case WLS       => (Φ.t * W * Φ).inverse * Φ.t * W
         case OLS       => (Φ.t * Φ).inverse * Φ.t
-    } // findc
+    } // pfit
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Computes the "hat" matrix.
      *  @param λ  the regularization parameter
      */
-    private def H (λ: Double) : MatrixD = Φ * findc (λ)
+    private def H (λ: Double) : MatrixD = Φ * pfit (λ)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Train the model, i.e., determine the optimal coeifficient 'c' for the
@@ -101,7 +104,7 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     def train (): VectoD =
     {
         if (λopt == -1) useGCV ()
-        c   = findc (λopt) * y      //
+        c   = pfit (λopt) * y      //
         e   = y - Φ * c
         sse = e dot e
         c
@@ -135,7 +138,7 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
         import scalation.minima.GoldenSectionLS
         def f (l: Double): Double =
         {
-            c   = findc (l) * y
+            c   = pfit (l) * y
             e   = y - Φ * c
             sse = e dot e
             gcv (l)
