@@ -200,6 +200,16 @@ object Smoothing_FTest extends App
 object Smoothing_FTest2 extends App
 {
     import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer}
+    import java.time.LocalDateTime
+
+    val time = LocalDateTime.now()
+                            .toString()
+                            .replace(":", "-")
+                            .replace(".", "-")
+
+    val DATA_FILE = s"$time-data.csv"
+    val SMOO_FILE = s"$time-smoothed.csv"
+    val SSES_FILE = s"$time-sse.csv"
 
     val ord  = 4                            // b-spline order
     val kMax = 30                           // maximum number of clusters
@@ -216,10 +226,12 @@ object Smoothing_FTest2 extends App
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     println ("Preparing data...")
-    val x = data //.slice (0, 1000)
+    val x = data.slice (0, 1000)
     val z = new MatrixD (x.dim1, x.dim2)    // matrix for smoothed sample
     val t = VectorD.range (0, x.dim2)       // vector for time points
     val c = new MatrixD (x.dim1, x.dim2)    // matrix for smoothing spline coefficients
+
+    x.write (DATA_FILE)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM SMOOTHING */
@@ -234,12 +246,16 @@ object Smoothing_FTest2 extends App
         //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
     } // for
 
+    z.write (SMOO_FILE)
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM KMEANS++ CLUSTERING */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     val sseObs = new VectorD (kMax)
     val sseSmo = new VectorD (kMax)
+    val rsObs  = new VectorD (kMax)
+    val rsSmo  = new VectorD (kMax)
     val kVals  = VectorD.range (1, kMax + 1)
 
     println ("Clustering... ")
@@ -249,16 +265,21 @@ object Smoothing_FTest2 extends App
         val cl1  = new KMeansPPClusterer (x, k)
         val cls1 = cl1.cluster ()
         val sse1 = cl1.sse ()
+        val rs1  = cl1.rSquared (x)
         sseObs (k-1) = sse1
-        print (s"observed SSE = $sse1; ")
+        print (s"observed SSE = $sse1; rs = $rs1; ")
         //val (cl2, cls2) = KMeansPPClusterer (z, k)
         val cl2  = new KMeansPPClusterer (z, k)
         val cls2 = cl2.cluster ()
         val sse2 = cl2.sse ()
+        val rs2  = cl2.rSquared (z)
         sseSmo (k-1) = sse2        
-        print (s"smoothed SSE = $sse2")
+        print (s"smoothed SSE = $sse2; rs = $rs2")
         println ()
     } // for
+
+    val sses = MatrixD.++^ (kVals, sseObs) :^+ sseSmo
+    sses.write (SSES_FILE)
 
     new Plot (kVals, sseObs, sseSmo, "k-means++ SSEs: Observed vs. Smoothed", true)
     new Plot (kVals, sseObs.map(math.log _), sseSmo.map(math.log _), "k-means++ log SSEs: Observed vs. Smoothed", true)
@@ -270,3 +291,122 @@ object Smoothing_FTest2 extends App
     // TODO implement
 
 } // Smoothing_FTest2
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `Smoothing_FTest3` is used to test the `Smoothing_F` class.
+ *  > run-main scalation.analytics.fda.Smoothing_FTest3
+ */
+object Smoothing_FTest3 extends App
+{
+    import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer}
+    import scalation.linalgebra.VectorD
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Create a new random subsample.
+     */
+    def createSubsample (x: MatrixD, ns: Int, s: Int = 0): (MatrixD, Array [Int]) =
+    {
+        import scalation.random.RandomVecSample
+        val rsg      = RandomVecSample (x.dim1, ns, s) 
+        val indexMap = rsg.igen ().array                    // select e.g., 5, 3, 7  // FIX - why toArray
+        val subsamp  = x.selectRows (indexMap)              // generate random subsample
+        //println (s"subsamp = $subsamp")
+        (subsamp, indexMap) 
+    } // createSubsample
+
+    val ord  = 4                            // b-spline order
+    val kMax = 30                           // maximum number of clusters
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* LOAD DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    println ("Loading observed data...")
+    val data   = MatrixD ("../data/gene_expression.csv")  // observed data
+    val _0     = new VectorD (data.dim2)
+    var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > 1) yield data(i), false)
+
+    println (s" -    data.min = ${data.min()}; data.max = ${data.max()}")
+    println (s" -   data.dim1 = ${data.dim1}")
+    println (s" - nzdata.dim1 = ${nzdata.dim1}")
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PREPARE DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    println ("Preparing data...")
+    val x = nzdata //.slice (0, 1000)
+
+    val s = (System.currentTimeMillis % 1000).toInt
+    val (sample, map) = createSubsample (x, 1000, s)
+    val t = VectorD.range (0, sample.dim2)
+
+    // println (sample)
+
+    import scalation.plot.PlotM
+    new PlotM (t, sample, lines = true)
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM SMOOTHING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    println ("Smoothing...")
+    val z = new MatrixD (sample.dim1, sample.dim2)
+    for (i <- sample.range1) {
+        val y   = sample(i)
+        val moo = new Smoothing_F (y, t, null, ord, SmoothingMethod.RIDGE, 0.1) // lambda = -1) // smoother
+        moo.train()
+        z(i)    = moo.predict (t)                                // predict for all time points
+        //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
+    } // for
+    
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM KMEANS++ CLUSTERING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    val sseObs = new VectorD (kMax)
+    val sseSmo = new VectorD (kMax)
+    val rsObs  = new VectorD (kMax)
+    val rsSmo  = new VectorD (kMax)
+    val kVals  = VectorD.range (1, kMax + 1)
+
+    val k = 6
+
+    println ("Clustering raw data... ")
+
+    val cl1  = new KMeansPPClusterer (sample, k)
+    val cls1 = cl1.cluster ()
+    val sse1 = cl1.sse ()
+    val rs1  = cl1.rSquared (sample)
+    println (s"observed SSE = $sse1; rs = $rs1")
+
+    val clust = Array.ofDim [MatrixD] (k)
+
+    for (c <- 0 until k) {
+        clust(c) = MatrixD (for (i <- 0 until cls1.size if cls1(i) == c) yield sample(i), false)
+        new PlotM (t, clust(c), _title = s"OBSERVED c = $c; n = ${clust(c).dim1}", lines = true)
+    } // for
+
+    println ("Clustering smoothed data... ")
+
+    val cl2  = new KMeansPPClusterer (z, k)
+    val cls2 = cl2.cluster ()
+    val sse2 = cl2.sse ()
+    val rs2  = cl2.rSquared (z)
+    println (s"smoothed SSE = $sse2; rs = $rs2")
+
+    val clust2 = Array.ofDim [MatrixD] (k)
+
+    for (c <- 0 until k) {
+        clust2(c) = MatrixD (for (i <- 0 until cls2.size if cls2(i) == c) yield z(i), false)
+        new PlotM (t, clust2(c), _title = s"SMOOTHED c = $c; n = ${clust2(c).dim1}", lines = true)
+    } // for
+
+    //val sses = MatrixD.++^ (kVals, sseObs) :^+ sseSmo
+    //sses.write (SSES_FILE)
+
+    //new Plot (kVals, sseObs, sseSmo, "k-means++ SSEs: Observed vs. Smoothed", true)
+    // new Plot (kVals, sseObs.map(math.log _), sseSmo.map(math.log _), "k-means++ log SSEs: Observed vs. Smoothed", true)
+
+} // Smoothing_FTest3

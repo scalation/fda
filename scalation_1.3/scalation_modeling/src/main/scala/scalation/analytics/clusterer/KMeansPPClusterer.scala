@@ -324,6 +324,11 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
      */
     def sse (): Double = sse (x)
 
+    def plot
+    {
+
+    } // plot
+
 } // KMeansPPClusterer
 
 

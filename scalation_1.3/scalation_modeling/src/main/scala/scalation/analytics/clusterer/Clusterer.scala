@@ -90,5 +90,23 @@ trait Clusterer
         sum
     } // sse
 
-} // Clusterer trait
+    def sst (x: MatrixD): Double =
+    {
+        val cent   = centroids ()
+        var csum   = new VectorD (cent.dim2)
+        for (i <- cent.range1) csum += cent(i)
+        val gmean  = csum / cent.dim1
+        var sum    = 0.0
+        for (i <- x.range1) sum += distance (x(i), gmean)
+        sum
+    } // sst
+
+    def rSquared (x: MatrixD): Double =
+    {
+        val ssex = sse (x)
+        val sstx = sst (x)
+        (sstx - ssex) / sstx
+    } // rSquared
+
+} // Clusterer traait
 

@@ -24,7 +24,7 @@ import scalation.scala2d.Shapes.{BasicStroke, Dimension, Graphics, Graphics2D}
  *  @param _title  the title of the plot
  */
 class PlotM (x: VectoD, y: MatriD, var label: Array [String] = null,
-            _title: String = "PlotM y_i vs. x for each i")
+            _title: String = "PlotM y_i vs. x for each i", lines: Boolean = false)
       extends VizFrame (_title, null)
 {
     private val EPSILON   = 1E-9
@@ -119,6 +119,9 @@ class PlotM (x: VectoD, y: MatriD, var label: Array [String] = null,
                 g2d.setPaint (color)
                 if (i < label.length) g2d.drawString (label(i), offset * (i + 2), frameH - 20)
 
+                var px_pos = 0 // previous x
+                var py_pos = 0 // previous y
+
                 for (j <- 0 until x.dim) {
                     val xx = round ((x(j) - minX) * (frameW - 2 * offset).asInstanceOf [Double])
                     x_pos = (xx / deltaX).asInstanceOf [Int] + offset
@@ -126,6 +129,17 @@ class PlotM (x: VectoD, y: MatriD, var label: Array [String] = null,
                     y_pos = (yy / deltaY).asInstanceOf [Int] + offset
                     dot.setFrame (x_pos, y_pos, diameter, diameter)         // x, y, w, h
                     g2d.fill (dot)
+
+                    // connect with lines
+                    if (j != 0 && lines) {
+                        g2d.setStroke (new BasicStroke (1.0f))
+                        g2d.drawLine (px_pos+1, py_pos+1, x_pos+1, y_pos+1)
+                    } // if
+
+                    px_pos = x_pos // update previous x
+                    py_pos = y_pos // update previous y
+                    
+
                 } // for
             } // for
         } // paintComponent
@@ -200,4 +214,27 @@ object PlotMTest extends App
     println ("plot = " + plot)
 
 } // PlotMTest object
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `PlotMTest2` object is used to test the `PlotM` class.
+ */
+object PlotMTest2 extends App
+{
+    import scalation.linalgebra.{MatrixD, VectorD}
+
+    val x = new VectorD (200)
+    val y = new MatrixD (5, 200)
+
+    for (i <- 0 until 200) {
+        x(i)    = (i - 100) / 10.0
+        y(0, i) = 10.0 * x(i)
+        y(1, i) = pow (x(i), 2)
+        y(2, i) = .1 * pow (x(i), 3)
+        y(3, i) = .01 * pow (x(i), 4)
+        y(4, i) = .001 * pow (x(i), 5)
+    } // for
+    val plot = new PlotM (x, y, Array ("Linear", "Quadratic", "Cubic", "Quartic", "Quintic"), lines = true)
+    println ("plot = " + plot)
+
+} // PlotMTest2 object
 
