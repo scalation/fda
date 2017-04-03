@@ -40,6 +40,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     private val b     = 20                                    // number of times to resample
     private val q     = 7                                     // number of candidates for each k
     private val n     = x.dim1                                // size of whole sample/population
+    println (s"n = $n")
     private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
     private val levels   = 2                                          // number of levels to try

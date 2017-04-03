@@ -407,7 +407,7 @@ object Smoothing_FTest3 extends App
 
     println ("Tight clustering observed data...")
 
-    val cl3  = new TightClusterer (x, 6, 1)
+    val cl3  = new TightClusterer (sample, 6, 1)
     val cls3 = cl3.cluster ()
     println (s"tight clusters = $cls3")
 
