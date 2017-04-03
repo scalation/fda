@@ -46,9 +46,14 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     private val clusters = new ArrayBuffer [Set [Int]] ()
     private val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
 
-    private val md = new MatrixD (n, n)                           // mean comembership matrix
-    private val d  = new MatrixD (n, n)                           // comembership matrix for current sample
-    
+    private val mda = Array.ofDim [Double] (n, n)
+    private val da  = Array.ofDim [Double] (n, n)
+    private val ya  = Array.ofDim [Double] (x.dim1, x.dim2)
+
+    private val md = new MatrixD (n, n, mda)                           // mean comembership matrix
+    private val d  = new MatrixD (n, n, da)                           // comembership matrix for current sample
+
+/*    
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create a new reandom subsample.
      */
@@ -77,6 +82,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
         //println (s"subsamp = $subsamp")
         (subsamp, indexMap) 
     } // createSubsample
+ */
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create a new reandom subsample.
@@ -276,7 +282,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
             if( nn == 1 ) break
 //	    if( avail.count( _ == true ) == 1 ) break // done = true
 // if( !done ) break
-            val y = new MatrixD(nn,x.dim2)
+            val y = new MatrixD(nn, x.dim2, ya)
             for (k <- kc until kc + levels) {
                 y.clear()
                 val (clubs, order) = selectCandidateClusters (k, y)
