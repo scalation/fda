@@ -10,6 +10,9 @@ version      := "1.3-SNAPSHOT",
 scalaVersion := "2.12.1",
 fork         := true,
 
+// disable publishing the main API jar
+publishArtifact in (Compile, packageDoc) := false,
+
 ////////////////////////////////////////////////////////////////////////////////
 // Scala options
 

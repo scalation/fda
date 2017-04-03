@@ -327,6 +327,8 @@ object Smoothing_FTest3 extends App
     val _0     = new VectorD (data.dim2)
     var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > 1) yield data(i), false)
 
+    // nzdata.write("nzdata.csv")
+
     println (s" -    data.min = ${data.min()}; data.max = ${data.max()}")
     println (s" -   data.dim1 = ${data.dim1}")
     println (s" - nzdata.dim1 = ${nzdata.dim1}")

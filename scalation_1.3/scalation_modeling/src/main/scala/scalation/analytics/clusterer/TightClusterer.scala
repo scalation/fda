@@ -11,6 +11,7 @@
 
 package scalation.analytics.clusterer
 
+import scala.util.control.Breaks.{breakable, break}
 import scala.collection.mutable.{ArrayBuffer, Set}
 import scala.math.min
 
@@ -41,6 +42,13 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     private val n     = x.dim1                                // size of whole sample/population
     private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
+    private val levels   = 2                                          // number of levels to try
+    private val clusters = new ArrayBuffer [Set [Int]] ()
+    private val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
+
+    private val md = new MatrixD (n, n)                           // mean comembership matrix
+    private val d  = new MatrixD (n, n)                           // comembership matrix for current sample
+    
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Create a new reandom subsample.
      */
@@ -78,9 +86,13 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 	val unclustered = avail.count(_ == true)
     	val nn	  = (unclustered * ratio).toInt 
 	//println(s"nn: $nn")
-        val md      = new MatrixD (n, n)                           // mean comembership matrix
+        // val md      = new MatrixD (n, n)                           // mean comembership matrix
+
 	val clustr2 = Array.ofDim[Int](n)			   // to hold the future clustering of our data classified by centroids of some subset sample clustering
+                                                                   // val d = new MatrixD (n, n)                           // comembership matrix for current sample
+        md.clear ()
         for (l <- 0 until b) {
+            d.clear ()                                             // clear the comembreship matrix
             //println (s"\n iteration l = $l")
             val (y, imap) = createSubsample ()                // create a new subsample
 
@@ -94,7 +106,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
             //println (s"clustr = ${clustr.deep}, cents: $cents")
 	    for (i <- x.range1 ) clustr2(i) = if( avail(i) ) kmc.classify2(x(i), cents) else -1
 	    if (DEBUG) println(s"clustr2: ${clustr2.deep}")
-            val d = new SparseMatrixD (n, n)                        // comembership matrix for current sample
+
             for (i <- x.range1; j <- x.range1 if (clustr2(i) == clustr2(j) && clustr2(i) >= 0)) {
 	    	//println(s"i: $i")
 		//println(s"j: $j")
@@ -145,9 +157,13 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def selectCandidateClusters (k: Int): (ArrayBuffer [Set [Int]], Array [Int]) =
     {
+        println ("AAAAAAAAAAAAAA")
         val md    = computeMeanComembership (k)               // mean comembership
+        println ("BBBBBBBBBBBBBB")        
         val clubs = formCandidateClusters (md)                // form candidate clusters (clubs)
+        println ("CCCCCCCCCCCCCC")        
         val order = orderBySize (clubs)                       // determine rank order by club size
+        println ("DDDDDDDDDDDDDD")
         if (DEBUG) {
             println (s"mean = $md")
             println (s"clubs = $clubs")
@@ -198,14 +214,11 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def cluster (): ArrayBuffer [Set [Int]] =
     {
-	var done    = false
-        val levels   = 2                                          // number of levels to try
-        val clusters = new ArrayBuffer [Set [Int]] ()
-        val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
-        for (kc <- k0 to kmin by -1) {                            // iteratively decrement kc (k current value)
+	// var done    = false
+        breakable { for (kc <- k0 to kmin by -1) {                            // iteratively decrement kc (k current value)
 	    //println(s"kc : $kc")
-	    if( avail.count( _ == true ) == 1 )done = true
-	    if( !done )
+	    if( avail.count( _ == true ) == 1 ) break // done = true
+	    // if( !done ) break 
             for (k <- kc until kc + levels) {
                 val (clubs, order) = selectCandidateClusters (k)
                 topClubs(k-kc) = pickTopQ (clubs, order)
@@ -218,11 +231,11 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
                 //topClubs(lev) -= stable                           // remove from top clubs (WHY?)
 		for( i <- topClubs ) i.clear()
 		for( i <- stable ) avail(i) = false
-		if( avail.count(_ == true ) == 0 ) done = true
+	        if( avail.count(_ == true ) == 0 ) break // done = true
             } else {
                 if (DEBUG) println (s"no stable cluster found for kc = $kc: $stable")
             } // if
-        } // for
+        }} // for // breakable
         if (DEBUG) println (s"clusters = $clusters")
         clusters
     } // cluster

@@ -1426,6 +1426,12 @@ class SparseMatrixD (val d1: Int,
     } // reduce_ip
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Clear the entries this `SparseMatrixD` by removing all bindings from 
+     *  its internal maps. 
+     */
+    def clear () = for (i <- 0 until d1) v(i).clear ()
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Clean values in matrix at or below the threshold by setting them to zero.
      *  Iterative algorithms give approximate values and if very close to zero,
      *  may throw off other calculations, e.g., in computing eigenvectors.
