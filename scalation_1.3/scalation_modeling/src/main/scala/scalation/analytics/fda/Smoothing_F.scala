@@ -409,7 +409,27 @@ object Smoothing_FTest3 extends App
 
     val cl3  = new TightClusterer (sample, 6, 1)
     val cls3 = cl3.cluster ()
-    println (s"tight clusters = $cls3")
+
+    for (set <- cls3) {
+        println (s"set = $set")
+        val clust3 = MatrixD (set.map(i => sample(i)).toSeq, false)
+        new PlotM (t, clust3, _title = s"OBSERVED TIGHT CLUSTER; n = ${set.size}", lines = true)
+    } // for
+
+    println ("Tight clustering smoothed data...")
+
+    val cl4  = new TightClusterer (z, 6, 1)
+    val cls4 = cl4.cluster ()
+
+    for (set <- cls4) {
+        println (s"set = $set")
+        val clust4 = MatrixD (set.map(i => z(i)).toSeq, false)
+        new PlotM (t, clust4, _title = s"SMOOTHED TIGHT CLUSTER; n = ${set.size}", lines = true)
+    } // for
+
+    println ("Done.")
+
+    //println (s"tight clusters = $cls3")
 
     //val sses = MatrixD.++^ (kVals, sseObs) :^+ sseSmo
     //sses.write (SSES_FILE)

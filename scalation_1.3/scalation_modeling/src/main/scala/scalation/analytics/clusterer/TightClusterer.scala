@@ -32,7 +32,7 @@ import Algorithm._
 class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 //      extends Clusterer
 {
-    private val DEBUG = true                                  // debug flag
+    private val DEBUG = false                                  // debug flag
     private val ratio = 0.7                                   // subsampling ratio
     private val alpha = 0.2                                   // how far below 1 to set threshold
     private val thres = 1 - alpha                             // membership threshold for high scores
@@ -40,7 +40,6 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     private val b     = 20                                    // number of times to resample
     private val q     = 7                                     // number of candidates for each k
     private val n     = x.dim1                                // size of whole sample/population
-    println (s"n = $n")
     private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
     private val levels   = 2                                          // number of levels to try
@@ -218,13 +217,9 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
      */
     def selectCandidateClusters (k: Int, y: MatrixD): (ArrayBuffer [Set [Int]], Array [Int]) =
     {
-        println ("AAAAAAAAAAAAAA")
         val md    = computeMeanComembership (k,y)               // mean comembership
-        println ("BBBBBBBBBBBBBB")        
         val clubs = formCandidateClusters (md)                // form candidate clusters (clubs)
-        println ("CCCCCCCCCCCCCC")        
         val order = orderBySize (clubs)                       // determine rank order by club size
-        println ("DDDDDDDDDDDDDD")
         if (DEBUG) {
             println (s"mean = $md")
             println (s"clubs = $clubs")
