@@ -79,7 +79,36 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     } // createSubsample
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Compute the mean comembership matrix by averaging results from several subsamples.
+    /** Create a new reandom subsample.
+     */
+    def createSubsample (subsamp: MatrixD): Array [Int] =
+    { 
+	val nn	  = avail.count(_ == true)		      // the number of available rows (i.e. - rows which haven't been tight clustered yet...)
+   	val ns    = (nn * ratio).toInt			      // size of a random subsample
+	//println(s"From subsamp ns: $ns")
+    	val sr    = 0 until ns                                // sample range
+	val strm  = (System.currentTimeMillis % 1000).toInt
+    	val rsg   = RandomVecSample (nn, ns, strm)	      // random sample generator
+	
+        val indexMap = rsg.igen ().toArray                    // select e.g. 5th, 3rd, 7th  // FIX - why toArray
+	//print(s"indexMap: ${indexMap.deep}")
+	// val subsamp  = new MatrixD(indexMap.length,x.dim2)    // a matrix to hold the specified vectors from the positions specified by indexMap 
+	val arrayMap = avail.zipWithIndex.map{case (e,i) =>
+	    	       			  if(e) i else -1}.filterNot(_ == -1) 	// the indices of the rows specified in indexMap e.g. 5th => index 7, 3rd => 3, 7th => 9
+        //val subsamp  = x.selectRows (arrayMap)                    	 	// generate random subsample
+	//println(s"arrayMap: ${arrayMap.deep}") 
+	for( i <- subsamp.range1 ) {
+	    //println(s"i: $i")
+	    //println(s"indexMap(i): ${indexMap(i)}")
+	    //println(s"arrayMap(indexMap(i)): ${arrayMap(indexMap(i))}")
+	    subsamp(i) = x(arrayMap(indexMap(i)))    	// fill the subsamp with the rows from x specified by arrayMap e.g. x(5), x(7), x(9)
+	}
+        //println (s"subsamp = $subsamp")
+        indexMap 
+    } // createSubsample
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Computet he mean comembership matrix by averaging results from several subsamples.
      */
     def computeMeanComembership (k: Int): MatrixD =
     {
@@ -91,10 +120,11 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 	val clustr2 = Array.ofDim[Int](n)			   // to hold the future clustering of our data classified by centroids of some subset sample clustering
                                                                    // val d = new MatrixD (n, n)                           // comembership matrix for current sample
         md.clear ()
+        val y = new MatrixD(nn,x.dim2)
         for (l <- 0 until b) {
             d.clear ()                                             // clear the comembreship matrix
             //println (s"\n iteration l = $l")
-            val (y, imap) = createSubsample ()                // create a new subsample
+            val imap = createSubsample (y)                // create a new subsample
 
 
                 //KMeansPPClusterer.permuteStreams ((s+l)%1000)
