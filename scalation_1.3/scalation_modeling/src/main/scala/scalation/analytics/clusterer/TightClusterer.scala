@@ -110,7 +110,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Computet he mean comembership matrix by averaging results from several subsamples.
      */
-    def computeMeanComembership (k: Int): MatrixD =
+    def computeMeanComembership (k: Int, y: MatrixD): MatrixD =
     {
 	val unclustered = avail.count(_ == true)
     	val nn	  = (unclustered * ratio).toInt 
@@ -120,9 +120,10 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 	val clustr2 = Array.ofDim[Int](n)			   // to hold the future clustering of our data classified by centroids of some subset sample clustering
                                                                    // val d = new MatrixD (n, n)                           // comembership matrix for current sample
         md.clear ()
-        val y = new MatrixD(nn,x.dim2)
+//        val y = new MatrixD(nn,x.dim2)
         for (l <- 0 until b) {
             d.clear ()                                             // clear the comembreship matrix
+            y.clear ()
             //println (s"\n iteration l = $l")
             val imap = createSubsample (y)                // create a new subsample
 
@@ -179,7 +180,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
         val sizes = clubs.map (_.size).toArray                // record sizes of clubs
         new SortingI (sizes).iselsort2 ()                     // indirectly sort by size
     } // orderBySize
-
+/*
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Select candidates for tight clusters in the K-means algorithm for a given
      *  number of clusters 'k'.  This corresponds to Algorithm A in the paper/URL.
@@ -201,6 +202,30 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
         } // if
         (clubs, order)
     } // selectCandidateClusters
+ */
+    
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Select candidates for tight clusters in the K-means algorithm for a given
+     *  number of clusters 'k'.  This corresponds to Algorithm A in the paper/URL.
+     *  @param k  the number of clusters
+     */
+    def selectCandidateClusters (k: Int, y: MatrixD): (ArrayBuffer [Set [Int]], Array [Int]) =
+    {
+        println ("AAAAAAAAAAAAAA")
+        val md    = computeMeanComembership (k,y)               // mean comembership
+        println ("BBBBBBBBBBBBBB")        
+        val clubs = formCandidateClusters (md)                // form candidate clusters (clubs)
+        println ("CCCCCCCCCCCCCC")        
+        val order = orderBySize (clubs)                       // determine rank order by club size
+        println ("DDDDDDDDDDDDDD")
+        if (DEBUG) {
+            println (s"mean = $md")
+            println (s"clubs = $clubs")
+            println (s"order = ${order.deep}")
+        } // if
+        (clubs, order)
+    } // selectCandidateClusters
+
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Pick the top q clubs based on club size.
@@ -246,11 +271,15 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     {
 	// var done    = false
         breakable { for (kc <- k0 to kmin by -1) {                            // iteratively decrement kc (k current value)
-	    //println(s"kc : $kc")
-	    if( avail.count( _ == true ) == 1 ) break // done = true
-	    // if( !done ) break 
+	                                                                      //println(s"kc : $kc")
+            val nn = (avail.count( _ == true) * ratio).toInt
+            if( nn == 1 ) break
+//	    if( avail.count( _ == true ) == 1 ) break // done = true
+// if( !done ) break
+            val y = new MatrixD(nn,x.dim2)
             for (k <- kc until kc + levels) {
-                val (clubs, order) = selectCandidateClusters (k)
+                y.clear()
+                val (clubs, order) = selectCandidateClusters (k, y)
                 topClubs(k-kc) = pickTopQ (clubs, order)
             } // for
             if (DEBUG) println (s"topClubs = ${topClubs.deep}")
