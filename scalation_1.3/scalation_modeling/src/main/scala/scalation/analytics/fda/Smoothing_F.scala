@@ -299,7 +299,7 @@ object Smoothing_FTest2 extends App
  */
 object Smoothing_FTest3 extends App
 {
-    import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer}
+    import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer, TightClusterer}
     import scalation.linalgebra.VectorD
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -402,6 +402,12 @@ object Smoothing_FTest3 extends App
         clust2(c) = MatrixD (for (i <- 0 until cls2.size if cls2(i) == c) yield z(i), false)
         new PlotM (t, clust2(c), _title = s"SMOOTHED c = $c; n = ${clust2(c).dim1}", lines = true)
     } // for
+
+    println ("Tight clustering observed data...")
+
+    val cl3  = new TightClusterer (x, 6, 1)
+    val cls3 = cl3.cluster ()
+    println (s"tight clusters = $cls3")
 
     //val sses = MatrixD.++^ (kVals, sseObs) :^+ sseSmo
     //sses.write (SSES_FILE)

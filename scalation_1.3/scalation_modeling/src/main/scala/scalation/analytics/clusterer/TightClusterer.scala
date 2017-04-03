@@ -14,7 +14,7 @@ package scalation.analytics.clusterer
 import scala.collection.mutable.{ArrayBuffer, Set}
 import scala.math.min
 
-import scalation.linalgebra.MatrixD
+import scalation.linalgebra.{MatrixD, SparseMatrixD}
 import scalation.random.RandomVecSample
 import scalation.util.SortingI
 
@@ -85,16 +85,16 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
             val (y, imap) = createSubsample ()                // create a new subsample
 
 
-                KMeansPPClusterer.permuteStreams ((s+l)%1000)
-                val (kmc, clustr)  = KMeansPPClusterer (y, k)
-/*
-	    val kmc	  = new KMeansPPClusterer(y,k,s=s)
-            val clustr 	  = kmc.cluster ()                       // get the clusters*/
+                //KMeansPPClusterer.permuteStreams ((s+l)%1000)
+                //val (kmc, clustr)  = KMeansPPClusterer (y, k)
+
+	    val kmc	  = new KMeansPPClusterer(y,k,s=(s+l)%1000)
+            val clustr 	  = kmc.cluster ()                       // get the clusters
 	    val cents 	  = kmc.centroids()
             //println (s"clustr = ${clustr.deep}, cents: $cents")
 	    for (i <- x.range1 ) clustr2(i) = if( avail(i) ) kmc.classify2(x(i), cents) else -1
-	    println(s"clustr2: ${clustr2.deep}")
-            val d = new MatrixD (n, n)                        // comembership matrix for current sample
+	    if (DEBUG) println(s"clustr2: ${clustr2.deep}")
+            val d = new SparseMatrixD (n, n)                        // comembership matrix for current sample
             for (i <- x.range1; j <- x.range1 if (clustr2(i) == clustr2(j) && clustr2(i) >= 0)) {
 	    	//println(s"i: $i")
 		//println(s"j: $j")
@@ -210,9 +210,9 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
                 val (clubs, order) = selectCandidateClusters (k)
                 topClubs(k-kc) = pickTopQ (clubs, order)
             } // for
-            println (s"topClubs = ${topClubs.deep}")
+            if (DEBUG) println (s"topClubs = ${topClubs.deep}")
             val (lev, stable) = findStable (topClubs)             // next stable cluster
-            println (s"(lev, stable) = ($lev, $stable)")
+            if (DEBUG) println (s"(lev, stable) = ($lev, $stable)")
             if (lev >= 0) {
                 clusters      += stable                           // add to stable clusters
                 //topClubs(lev) -= stable                           // remove from top clubs (WHY?)
@@ -220,15 +220,14 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
 		for( i <- stable ) avail(i) = false
 		if( avail.count(_ == true ) == 0 ) done = true
             } else {
-                println (s"no stable cluster found for kc = $kc: $stable")
+                if (DEBUG) println (s"no stable cluster found for kc = $kc: $stable")
             } // if
         } // for
-        println (s"clusters = $clusters")
+        if (DEBUG) println (s"clusters = $clusters")
         clusters
     } // cluster
 
 } // TightClusterer class
-
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `TightClustererTest` is used to test the `TightClusterer` class.
