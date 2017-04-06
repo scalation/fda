@@ -54,7 +54,7 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     private val ns    = bs.size ()
     private val Φ     = bs.phi ()(t)           // matrix: jth spline at time ti
     private val Σ     = bs.penalty ()(t)       // penalty matrix
-    private val I     = MatrixD.eye(m)         // identity matrix
+    private val I     = MatrixD.eye(ns)         // identity matrix
     private val W     = MatrixD.eye(m)         // weight matrix
 
     private var λopt  = lambda                 // regularization parameter    
@@ -168,6 +168,8 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
      */
     def predict (tv: VectorD): VectorD = tv.map (predict (_))
 
+    def plotBasis (tt: VectorD = t) = bs.plot () (tt)
+
 } // Smoothing_F class
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -180,18 +182,26 @@ object Smoothing_FTest extends App
     import math.pow
 
     val normal = Normal (0, 100.0)                                   // normal random variate generator
+
     val t      = VectorD.range (0, 100) / 17.00                      // time points
+    val tt     = VectorD.range (0, 1000) / 170.00                    // time points    
+/*
+    val t      = VectorD.range (0, 50) / (17.0 / 2.0)                      // time points
+    val tt     = VectorD.range (0, 500) / (170.00 / 2.0)                    // time points    
+ */  
     val y      = t.map ((x: Double) => pow(x-4, 5) + 5.0 * pow(x-4, 4) - 20.0 * pow(x-4, 2) + 4.0 * (x-4))
     val z      = y.map ((e: Double) => e + normal.gen)  
     val mMin   = 4 // 2                                              // minimum order to try
     val mMax   = 4                                                   // maximum order to try
-    val method = SmoothingMethod.ROUGHNESS                           // smoothing method
+    val method = SmoothingMethod.RIDGE                               // smoothing method
+    val lambda = 0.1
 
     new Plot (t, y, z, s"TRUE DATA vs. WITH NOISE", lines = true)
 
     for (ord <- mMin to mMax) {
         val τ   = null                                               // let `Smoothing_F` nake the knots
-        val moo = new Smoothing_F (z, t, τ, ord, method, -1)         // smoother (use GCV)
+        val moo = new Smoothing_F (z, t, τ, ord, method, lambda)     // smoother (use GCV)
+        moo.plotBasis (tt)
         val c   = moo.train ()                                       // train -> set coefficients
         val x   = moo.predict (t)                                    // predict for all time points
         new Plot (t, z, x, s"B-Spline Fit: ord = $ord; λ = ${moo.getLambda}", lines = true)
