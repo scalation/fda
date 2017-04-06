@@ -42,7 +42,7 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
     private val n     = x.dim1                                // size of whole sample/population
     private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
-    private val levels   = 2                                          // number of levels to try
+    private val levels   = 3                                          // number of levels to try
     private val clusters = new ArrayBuffer [Set [Int]] ()
     private val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
 

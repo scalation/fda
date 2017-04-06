@@ -280,12 +280,23 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
 	      if (distance( y, cent(i) ) < d ) {
 	          cluster = i
 	          d = distance( y, cent(i) )
-	      }// if
-	}// for	
+	      } // if
+	} // for	
 	cluster
-    }// classify
+    } // classify
 
-
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Given a matrix of new points/vector, determine which cluster it 
+     *  belongs to.
+     *  @param v  the vectors to classify
+     */
+    def classify (v: MatrixD): Array [Int] =
+    {
+        val cluster = Array.ofDim [Int] (x.dim1)
+        for (i <- v.range1) cluster(i) = classify(v(i))
+	cluster
+    } // classify
+    
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Given a new point/vector y and a set of hypothetical centroids,
      *  determine which cluster it would belong to.
@@ -302,7 +313,7 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
 	      }// if
 	}// for	
 	cluster
-    }// classify2
+    } // classify2
     
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Compute the sum of squared errors (distance squared) from all points in
