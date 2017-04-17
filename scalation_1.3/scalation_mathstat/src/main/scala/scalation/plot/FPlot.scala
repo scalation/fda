@@ -2,16 +2,17 @@
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** @author  John Miller, Michael Cotterell
  *  @version 1.3
- *  @date    Mon Oct 31 18:05:06 EDT 2016
- *  @see     LICENSE (MIT style license file).
+ *  @date    Sun Nov 15 15:05:06 EDT 2009
+ *  @see     LICENSE (MIT style license file). 
  */
 
 package scalation.plot
 
-import scala.math.{ceil, floor, min, pow, round}
+import scala.collection.immutable.NumericRange
+import scala.math.{ceil, floor, min, max, pow, round}
 
-import scalation.linalgebra.{VectoD, VectoI}
 import scalation.math.FunctionS2S
+import scalation.linalgebra.{VectoD, VectorD, VectoI, MatrixD}
 import scalation.scala2d.{Panel, VizFrame}
 import scalation.scala2d.{Ellipse, Line}
 import scalation.scala2d.Colors._
@@ -21,33 +22,35 @@ import scalation.scala2d.Shapes.{BasicStroke, Dimension, Graphics, Graphics2D}
 /** The `FPlot` class takes 'x' and 'y' vectors of data values and plots the '(x, y)'
  *  data points.  Optionally, a 'z' vector may be plotted with 'y'.  Note, axes are
  *  determined by the 'x' and 'y' vectors only.  For more vertical vectors use `PlotM`.
- *  @param x1       the x vector of data values (horizontal)
- *  @param y1       the y vector of data values (primary vertical)
- *  @param x2       the x vector of functional values (horizontal)
- *  @param y2       the z function of data values (secondary vertical) to compare with y
+ *  @param x       the x vector of data values (horizontal)
+ *  @param y       the y vector of data values (primary vertical)
+ *  @param z       the z vector of data values (secondary vertical) to compare with y
  *  @param _title  the title of the plot
  */
-class FPlot (x1: VectoD, y1: VectoD, x2: VectoD, y2: FunctionS2S, _title: String = "Plot y vs. x")
-    extends VizFrame (_title, null)
+class FPlot (x: NumericRange[Double], fs: Seq[FunctionS2S], _title: String = "FPlot", lines: Boolean = false)
+      extends VizFrame (_title, null)
 {
-    getContentPane ().add (new FCanvas (x1, y1, x2, y2, getW, getH))
+    def this (x: NumericRange[Double], y: FunctionS2S, _title: String, lines: Boolean) = this (x, Seq(y), _title, lines)
+    //def this (x: NumericRange[Double], y: FunctionS2S, z: FunctionS2S, _title: String, lines: Boolean) = this (x, Seq(y, z), _title, lines)
+
+    getContentPane ().add (new FCanvas (x, fs, getW, getH, lines))
     setVisible (true)
-
 } // FPlot class
-
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `FCanvas` class provides a canvas on which to draw the plot.
- *  @param x1       the x vector of data values (horizontal)
- *  @param y1       the y vector of data values (primary vertical)
- *  @param x2       the x vector of functional values (horizontal)
- *  @param y2       the z function of data values (secondary vertical) to compare with y
+ *  @param x       the x vector of data values (horizontal)
+ *  @param y       the y vector of data values (primary vertical)
+ *  @param z       the z vector of data values (secondary vertical) to compare with y
  *  @param width   the width
  *  @param height  the height
  */
-class FCanvas (x1: VectoD, y1: VectoD, x2: VectoD, y2: FunctionS2S, width: Int, height: Int)
-    extends Panel
+class FCanvas (x: NumericRange[Double], fs: Seq[FunctionS2S], width: Int, height: Int, lines: Boolean = false)
+      extends Panel
 {
+    private val _x: VectorD = VectorD (for (i <- x) yield i)
+    private val _y: MatrixD = MatrixD (for (f <- fs) yield VectorD (for (j <- x) yield f(j)), false)
+
     private val EPSILON   = 1E-9
     private val frameW    = width
     private val frameH    = height
@@ -56,15 +59,19 @@ class FCanvas (x1: VectoD, y1: VectoD, x2: VectoD, y2: FunctionS2S, width: Int, 
     private val baseY     = frameH - offset
     private val stepsX    = 10
     private val stepsY    = 10
-    private val minX      = floor (x1.min ())
-    private val maxX      = ceil (x1.max () + EPSILON)
-    private val minY      = floor (y1.min ())
-    private val maxY      = ceil (y1.max () + EPSILON)
+    private val minX      = floor (_x.min ())
+    private val maxX      = ceil (_x.max () + EPSILON)
+    private val minY      = floor (_y.min ())
+    private val maxY      = ceil (_y.max ()) + EPSILON
     private val deltaX    = maxX - minX
     private val deltaY    = maxY - minY
-    private val diameter  = 4
+    private val diameter  = 1
+    private val r         = diameter / 2
     private val dot       = Ellipse ()
     private val axis      = Line ()
+
+    println (s"_x = ${_x}")
+    println (s"_y = ${_y}")
 
     setBackground (white)
 
@@ -110,37 +117,34 @@ class FCanvas (x1: VectoD, y1: VectoD, x2: VectoD, y2: FunctionS2S, width: Int, 
 
         //:: Draw the dots for the data points being plotted
 
-        for (i <- 0 until x1.dim) {
-            val xx = round ((x1(i) - minX) * (frameW - 2 * offset).asInstanceOf [Double])
-            x_pos = (xx / deltaX).asInstanceOf [Int] + offset
-            val yy = round ((maxY - y1(i)) * (frameH - 2 * offset).asInstanceOf [Double])
-            y_pos = (yy / deltaY).asInstanceOf [Int] + offset
-            dot.setFrame (x_pos, y_pos, diameter, diameter)         // x, y, w, h
-            g2d.setPaint (black)
-            g2d.fill (dot)
-        } // for
+        var px_pos = 0 // previous x
+        var py_pos = 0 // previous y
 
-        var x_pos_prev = 0
-        var y_pos_prev = 0
+        for (i <- _y.range1) {
+            val color = randomColor (i)
+            g2d.setPaint (color)
 
-        for (i <- 0 until x2.dim) {
-            val xx = round ((x2(i) - minX) * (frameW - 2 * offset).asInstanceOf [Double])
-            x_pos = (xx / deltaX).asInstanceOf [Int] + offset
-            val yy = round ((maxY - y2(x2(i))) * (frameH - 2 * offset).asInstanceOf [Double])
-            y_pos = (yy / deltaY).asInstanceOf [Int] + offset
-            if (x1.contains(x2(i))) {
-                dot.setFrame(x_pos - diameter/2, y_pos - diameter/2, diameter, diameter) // x, y, w, h
-            } else {
-                dot.setFrame(x_pos - diameter/4, y_pos - diameter/4, diameter/2, diameter/2) // x, y, w, h
-            } // if
-            g2d.setPaint (red)
-            g2d.fill (dot)
-            if (i > 0) {
-                g2d.setStroke (new BasicStroke (1.0f))
-                g2d.drawLine (x_pos_prev, y_pos_prev, x_pos, y_pos)
-            } // if
-            x_pos_prev = x_pos
-            y_pos_prev = y_pos
+            for (j <- _y.range2) {
+                val xx = round ((_x(j) - minX) * (frameW - 2 * offset).asInstanceOf [Double])
+                x_pos = (xx / deltaX).asInstanceOf [Int] + offset
+                val yy = round ((maxY - _y(i, j)) * (frameH - 2 * offset).asInstanceOf [Double])
+                y_pos = (yy / deltaY).asInstanceOf [Int] + offset
+                dot.setFrame (x_pos, y_pos, diameter, diameter)         // x, y, w, h
+
+                // g2d.setPaint (black)
+                g2d.fill (dot)
+
+                // connect with lines
+                if (j != 0 && lines) {
+                    g2d.setStroke (new BasicStroke (1.0f))
+                    g2d.drawLine (px_pos+r, py_pos+r, x_pos+r, y_pos+r)
+                } // if
+
+                px_pos = x_pos // update previous x
+                py_pos = y_pos // update previous y
+
+            } // for
+
         } // for
 
     } // paintComponent
@@ -151,14 +155,38 @@ class FCanvas (x1: VectoD, y1: VectoD, x2: VectoD, y2: FunctionS2S, width: Int, 
      */
     def clip (x: Double): String =
     {
-        val s = x.toString
+        val s = x.toString 
         s.substring (0, min (s.length, 4))
     } // clip
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Convert a Plot vectors to a string.
      */
-    override def toString = "Plot (y = " + y1 + " vs. x = " + x1 + ")"
+    override def toString = "FPlot (y = " + _y + " vs. x = " + _x + ")"
 
 } // FCanvas class
+
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `FPlotTest` object is used to test the `FPlot` class.
+ *  > run-main scalation.plot.FPlotTest
+ */
+object FPlotTest extends App
+{
+    import scalation.linalgebra.VectorD
+/*
+    val x = VectorD (0.0, 1.0, 2.0, 3.0,  4.0,  5.0,  6.0, 7.0, 8.0, 9.0, 10.0)
+    val y = VectorD (0.0, 1.0, 4.0, 9.0, 16.0, 25.0, 16.0, 9.0, 4.0, 1.0,  0.0)
+*/
+    //val x = new VectorD (100)
+    //val y = new VectorD (100)
+    //for (i <- 0 until 100) { x(i) = i / 10.0; y(i) = pow (x(i) - 5, 2) }
+    def f1 (x: Double) = 10.0 * math.sin (2.0 * x) + 50.0
+    def f2 (x: Double) = pow (x, 2)
+    def f3 (x: Double) = x + 50
+    def f4 (x: Double) = 10.0 * math.cos (2.0 * x) + 50.0    
+    val plot = new FPlot (-10.0 to 10.0 by 0.1, Seq(f1, f2, f3, f4), lines = true)
+    println ("plot = " + plot)
+
+} // FPlotTest object
 

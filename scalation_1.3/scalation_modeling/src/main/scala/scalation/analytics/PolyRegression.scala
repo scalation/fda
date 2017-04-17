@@ -56,6 +56,17 @@ class PolyRegression (t: VectorD, y: VectorD, k: Int, technique: RegTechnique = 
     } // expand
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Expand the vector 't' into a matrix of powers of 't':  [1, t, t^2 ... t^k].
+     *  @param t  the vector to expand into the vector
+     */
+    def expand (t: VectorD): MatrixD = 
+    {
+        val v = new MatrixD (t.dim, 1 + k)
+        for (i <- 0 until t.dim; j <- 0 to k) v(i, j) = t(i)~^j
+        v
+    } // expand
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Train the predictor by fitting the parameter vector (b-vector) in the
      *  regression equation
      *      y  =  b dot x + e  =  [b_0, ... b_k] dot [1, t, t^2 ... t^k] + e
@@ -95,6 +106,8 @@ class PolyRegression (t: VectorD, y: VectorD, k: Int, technique: RegTechnique = 
      *  @param z  the new vector to predict
      */
     def predict (z: VectoD): Double = rg.predict (z)
+
+    def predictExpand (z: VectorD): VectoD = rg.predict (expand (z))
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Perform backward elimination to remove the least predictive variable

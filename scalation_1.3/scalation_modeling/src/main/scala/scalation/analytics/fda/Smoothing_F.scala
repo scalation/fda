@@ -42,11 +42,11 @@ import SmoothingMethod._
  *  @param method  the smoothing method
  *  @param lambda  the regularization parameter (>= 0 or -1 to use GCV) 
  */
-class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: Int = 4, method: SmoothingMethod = ROUGHNESS, lambda: Double = 1E-5)
+class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: Int = 4, method: SmoothingMethod = ROUGHNESS, lambda: Double = 1E-5, gap: Int = 1)
       extends Error
 {
     private val DEBUG = false                   // debug flag
-    private val GAP   = 1                      // gap between time points and knots
+    private val GAP   = gap  // 1                      // gap between time points and knots
     private val m     = t.dim                  // number of data time points
     if (τ == null) τ  = makeKnots
     private val n     = τ.dim                  // number of time points for the knots
@@ -55,7 +55,7 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
     private val Φ     = bs.phi ()(t)           // matrix: jth spline at time ti
     private val Σ     = bs.penalty ()(t)       // penalty matrix
     private val I     = MatrixD.eye(ns)         // identity matrix
-    private val W     = MatrixD.eye(m)         // weight matrix
+    private val W     = MatrixD.eye(m) // calcCov (y).inverse    //MatrixD.eye(m)         // weight matrix
 
     private var λopt  = lambda                 // regularization parameter    
     private var c: VectoD = null               // coefficient vector
@@ -66,6 +66,12 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
 
     def summary
     {
+        val cov    = calcCov(y)
+        val covInv = cov.inverse
+        println (s"calcVar     = $cov")
+        println (s"1/calcVar   = $cov")
+        println (s"cov * covInc = ${cov * covInv}")
+        println (s"ns          = $ns")
         println (s"size of λΣ  = ${λopt * Σ.norm}")
         println (s"size of Φ'Φ = ${(Φ.t * Φ).norm}")
         println (s"ratio       = ${(λopt * Σ.norm) / (Φ.t * Φ).norm}")
@@ -93,6 +99,23 @@ class Smoothing_F (y: VectorD, t: VectorD, private var τ: VectorD = null, ord: 
         case OLS       => (Φ.t * Φ).inverse * Φ.t
     } // pfit
 
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Calculate the correlation matrix for the basis functions.
+     */
+    def calcCov (yy: VectorD, k: Int = 1): MatrixD =
+    {
+        import scalation.stat.vectorD2StatVector
+        val avar = yy.variance
+        val cov  = MatrixD.eye (yy.dim) * avar
+        val acov = yy.acov (k)
+        for (i <- 0 until yy.dim - 1) {
+            cov(i, i+1) = acov
+            cov(i+1, i) = acov
+        } // for
+        cov
+    } // calcCov
+    
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Computes the "hat" matrix.
      *  @param λ  the regularization parameter
@@ -181,7 +204,9 @@ object Smoothing_FTest extends App
     import scalation.random.Normal
     import math.pow
 
-    val normal = Normal (0, 100.0)                                   // normal random variate generator
+    val normal1 = Normal (0, 100.0)                                   // normal random variate generator
+    val normal2 = Normal (0, 5000.0)                                   // normal random variate generator
+    val normal3 = Normal (0, 100.0)                                   // normal random variate generator    
 
     val t      = VectorD.range (0, 100) / 17.00                      // time points
     val tt     = VectorD.range (0, 1000) / 170.00                    // time points    
@@ -190,11 +215,11 @@ object Smoothing_FTest extends App
     val tt     = VectorD.range (0, 500) / (170.00 / 2.0)                    // time points    
  */  
     val y      = t.map ((x: Double) => pow(x-4, 5) + 5.0 * pow(x-4, 4) - 20.0 * pow(x-4, 2) + 4.0 * (x-4))
-    val z      = y.map ((e: Double) => e + normal.gen)  
+    val z      = y.map ((e: Double) => e + (if (e < 2) normal1.gen else if (e < 3) normal2.gen else normal3.gen))
     val mMin   = 4 // 2                                              // minimum order to try
     val mMax   = 4                                                   // maximum order to try
-    val method = SmoothingMethod.RIDGE                               // smoothing method
-    val lambda = 0.1
+    val method = SmoothingMethod.ROUGHNESS // RIDGE                  // smoothing method
+    val lambda = -1 // 0.07318687795319875
 
     new Plot (t, y, z, s"TRUE DATA vs. WITH NOISE", lines = true)
 
@@ -205,10 +230,20 @@ object Smoothing_FTest extends App
         val c   = moo.train ()                                       // train -> set coefficients
         val x   = moo.predict (t)                                    // predict for all time points
         new Plot (t, z, x, s"B-Spline Fit: ord = $ord; λ = ${moo.getLambda}", lines = true)
+        new Plot (t, y, x, s"TRUTH vs. SMOOTHED", lines = true)
         moo.summary
     } // for
 
+    {
+        import scalation.analytics.PolyRegression
+        val prg   = new PolyRegression (t, z, mMax+1)
+        prg.train ()
+        val yp = prg.predictExpand (t)
+        new Plot (t, y, yp, s"TRUTH vs. POLYNOMIAL", lines = true)
+    }
+
 } // Smoothing_FTest object
+
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -356,9 +391,7 @@ object Smoothing_FTest3 extends App
     banner ("Loading observed data...")
     val data   = MatrixD ("../data/gene_expression.csv")  // observed data
     val _0     = new VectorD (data.dim2)
-    var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > 1) yield data(i), false)
-
-
+    var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > 100) yield data(i), false)
 
     println (s" -    data.min = ${data.min()}; data.max = ${data.max()}")
     println (s" -   data.dim1 = ${data.dim1}")
@@ -371,28 +404,33 @@ object Smoothing_FTest3 extends App
     banner ("Preparing data...")
     val x = nzdata //.slice (0, 1000)
 
-    val s = (System.currentTimeMillis % 1000).toInt
-    val (sample, map) = createSubsample (x, 1000, s)
-    val t = VectorD.range (0, sample.dim2)
+    //val s = (System.currentTimeMillis % 1000).toInt
+    //val (sample, map) = createSubsample (x, 1000, s)
+    //val t = VectorD.range (0, sample.dim2)
+    val t      = VectorD.range (0, x.dim2)
+    val sample = x
 
     // sample.write (DATA_FILE)    
 
-    new PlotM (t, sample, lines = true)
+    new PlotM (t, sample, null, s"OBSERVED", lines = true)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM SMOOTHING */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     banner ("Smoothing...")
+    val gap    = 3
     val smooth = new MatrixD (sample.dim1, sample.dim2)
-    val coeffs = new MatrixD (sample.dim1, 8)    // matrix for smoothing spline coefficients    
+    val coeffs = new MatrixD (sample.dim1, sample.dim2/gap + ord - 2)    // matrix for smoothing spline coefficients    
     for (i <- sample.range1) {
         val y     = sample(i)
-        val moo   = new Smoothing_F (y, t, null, ord, SmoothingMethod.RIDGE, lambda = -1) // smoother
+        val moo   = new Smoothing_F (y, t, null, ord, SmoothingMethod.RIDGE, -1, gap) // smoother
         coeffs(i) = moo.train()
         smooth(i) = moo.predict (t)                     // predict for all time points
         //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
     } // for
+
+    new PlotM (t, smooth, null, s"SMOOTHED", lines = true)
     
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM CLUSTERING */
@@ -432,17 +470,46 @@ object Smoothing_FTest3 extends App
         cl
     } // clusterTight
 
-    val ocl = clusterKMPP (sample, 6, "OBSERVED")
-    val scl = clusterKMPP (smooth, 6, "SMOOTHED")
+//    val ocl = clusterKMPP (sample, 6, "OBSERVED")
+//    val scl = clusterKMPP (smooth, 6, "SMOOTHED")
 
-    println(s"new SSE = ${scl.sse (sample)}; rSquared = ${scl.rSquared (sample)}")
+//    println(s"new SSE = ${scl.sse (sample)}; rSquared = ${scl.rSquared (sample)}")
 
     val ccl = clusterKMPP (coeffs, 6, "  COEFFS", smooth)
 
-    println(s"new SSE = ${ccl.sse (sample)}; rSquared = ${ccl.rSquared (sample)}")
+//    println(s"new SSE = ${ccl.sse (sample)}; rSquared = ${ccl.rSquared (sample)}")
 
 //    clusterTight (sample, 1, 6, "OBSERVED")
 //    clusterTight (smooth, 1, 6, "SMOOTHED")
-//    clusterTight (coeffs, 1, 6, "  COEFFS", smooth)        
+    clusterTight (coeffs, 1, 6, "  COEFFS", smooth)        
 
 } // Smoothing_FTest3
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `Smoothing_FTest4` is used to test the `Smoothing_F` class.
+ *  > run-main scalation.analytics.fda.Smoothing_FTest
+ */
+object Smoothing_FTest4 extends App
+{
+    import scalation.random.Normal
+    import math.pow
+
+    val s   = (System.currentTimeMillis % 1000).toInt
+    val e   = Normal (0, 1.0, stream = s)
+    val rho = 0.3
+    val y   = VectorD.range (0, 50)
+    y(0)    = e.gen; for (i <- 1 until y.dim) y(i) = rho * y(i-1) + e.gen
+    val t   = VectorD.range (0, 50)                          // time points
+    val τ   = null                                           // let `Smoothing_F` nake the knots
+    val moo = new Smoothing_F (y, t, τ, 4, lambda = -1)      // smoother (use GCV)
+    val c   = moo.train ()                                   // train -> set coefficients
+    val z   = moo.predict (t)                                // predict for all time points
+    moo.summary
+
+    println (s"y = $y")
+    println (s"var = ${y.variance}")
+
+    new Plot (t, y, z, lines = true)
+
+} // Smoothing_FTest4 object

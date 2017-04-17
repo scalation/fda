@@ -189,9 +189,12 @@ object Colors
      */
     def randomColor (id: Int, full: Boolean = true): Color =
     {
+        val bases = if (full) 27 else 25        
         val r     = Randi (0x0, 0x1F)
-        val bases = if (full) 27 else 25
-        id % bases match {
+        val r2    = Randi (0, bases-1)
+        var idmb  = id % bases
+        while ((3 <= idmb) && (idmb <= 5)) idmb = r2.igen              // Yellow Exclusion
+        idmb match {
             case  0 => new Color (hi+r.igen, r.igen,    r.igen)        // RED
             case  1 => new Color (hi+r.igen, md+r.igen, r.igen)        // orange
             case  2 => new Color (hi+r.igen, md+r.igen, md+r.igen)     // peach
