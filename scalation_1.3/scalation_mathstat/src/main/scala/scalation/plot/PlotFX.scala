@@ -21,9 +21,12 @@ import javafx.event.ActionEvent
 import javafx.event.EventHandler
 import javafx.geometry.Insets
 
+
+
 import scalation.linalgebra.{VectoD, VectoI}
 import scalation.scala2d.{Panel, VizFrame}
 import scala.math.pow
+
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `PlotFX` class takes 'x' and 'y' vectors of data values and plots the '(x, y)'
@@ -148,20 +151,18 @@ class PlotFX (x: VectoD, y: VectoD, z: VectoD, _title: String = "Plot y vs. x")
 } // PlotFX class
 
 
-
-
-
 object PlotFXTest extends App {
   import scalation.linalgebra.VectorD
   /*
       val x = VectorD (0.0, 1.0, 2.0, 3.0,  4.0,  5.0,  6.0, 7.0, 8.0, 9.0, 10.0)
       val y = VectorD (0.0, 1.0, 4.0, 9.0, 16.0, 25.0, 16.0, 9.0, 4.0, 1.0,  0.0)
-  */
-  val x = new VectorD (100)
-  val y = new VectorD (100)
-  val z = new VectorD (100)
-  for (i <- 0 until 100) { x(i) = i / 10.0; y(i) = pow (x(i) - 5, 2) }
-  for (i <- 0 until 100) { x(i) = i / 10.0; z(i) = pow (x(i) - 5, 3) }
+   */
+    val n = 40
+  val x = new VectorD (n)
+  val y = new VectorD (n)
+  val z = new VectorD (n)
+  for (i <- 0 until n) { x(i) = i / 10.0; y(i) = pow (x(i) - 5, 2) }
+  for (i <- 0 until n) { x(i) = i / 10.0; z(i) = pow (x(i) - 5, 3) }
   val plot = new PlotFX (x, y, z)
   println ("plot = " + plot)
 

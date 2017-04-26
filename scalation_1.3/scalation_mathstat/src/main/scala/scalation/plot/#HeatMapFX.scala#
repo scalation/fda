@@ -1,0 +1,123 @@
+/**
+  * Created by alec on 2/6/17.
+  */
+
+package scalation.plot
+
+import javafx.scene.shape.{Line, Rectangle}
+import javafx.scene.paint.Color
+
+import scalation.scala2d.{Panel, VizFrame}
+
+import javafx.scene.control.ScrollPane
+import javafx.scene.control.Tooltip
+import javafx.scene.layout.VBox
+import javafx.scene.Group
+
+import scalation.linalgebra.{MatriD, VectoD}
+import scalation.linalgebra.{VectoD, VectoI}
+import scalation.linalgebra.{MatrixD, VectorD}
+import scalation.scala2d.{Panel, VizFrame}
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `HeatMapFX` class takes 'x' and 'y' vectors of data values and plots the '(x, y)'
+  *  data points. For more vertical vectors use `PlotM`.
+  *  @param x       the x vector of data values (horizontal)
+  *  @param y       the y vector of data values (primary vertical)
+  *  @param z       the z vector of data values (secondary vertical) to compare with y
+  *  @param _title  the title of the plot
+  */
+class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX")
+  extends VizFrame (_title, null) {
+
+    val XOFF   = 10.0
+    val YOFF   = 10.0
+    val WIDTH  = 600.0 / x.dim2 // 20.0
+    val HEIGHT = 1.0 // 550.0 / x.dim1 // 10.0
+    val RANGES = 3
+    val COLORS = Array (Color.YELLOW, Color.ORANGE, Color.RED)
+
+    val min = x.min()
+    val max = x.max()
+
+    // creating canvas
+    val c     = new CanvasFX (_title, 800, 600)
+    val rects = new Group ()
+    val sp    = new ScrollPane (rects) // rects)
+
+//    sp.setPrefSize (120, 120)
+    sp.setPannable (true)
+    sp.setVbarPolicy (ScrollPane.ScrollBarPolicy.ALWAYS)
+
+    var map = Array.ofDim[Rectangle](x.dim1, x.dim2)
+
+    for (i <- 0 until x.dim1; j <- 0 until x.dim2) {
+        val r = new Rectangle ()
+        val v = x(i, j)
+        //val t = new Tooltip (s"$v")
+        r.setWidth (WIDTH)
+        r.setHeight (HEIGHT)
+        r.setX (XOFF + (WIDTH  * j)) //  + j)
+        r.setY (YOFF + (HEIGHT * i)) //  + i)
+        r.setFill (getColor (v))
+        // Tooltip.install (r, t);
+        map(i)(j) = r
+        // c.add (r) //.nodes.getChildren().addAll(r)
+        rects.getChildren().addAll(r)
+    } // for
+
+    c.add (rects)
+    c.show ()
+
+    def getColorIndex (v: Double): Int = {
+        val rLen = (max - min)/RANGES
+        for (i <- 0 until RANGES) {
+            if (v <= min + rLen * (i+1)) return i
+        } // for
+        return -1
+    } // getColor
+
+    /** Use linear interpolation to get the color for this data value from the 
+     *  color gradient (YELLOW, ORANGE, RED). 
+     *  -----------------------------------------------------------------------
+     *  NOTE: Currently, we use two sub gradients (YELLOW, ORANGE) and 
+     *  (ORANGE, RED). If we need a larger gradient, we may explore adding
+     *  (LIGHTYELLOW, YELLOW) to the beginning and (RED, DARKRED) to the end.  
+     *  -----------------------------------------------------------------------
+     *  @param v  the data value
+     */
+    def getColor (v: Double): Color =
+    {
+        val wv    = v - min
+        val wmax  = max - min
+        val wmid  = wmax / 2
+        val color = if (v <= wmid) {
+            val p = (wv / wmid).toDouble
+            val r = (Color.YELLOW.getRed()   * 255 * (1.0 - p) + Color.ORANGE.getRed()   * 255 * p).toInt
+            val g = (Color.YELLOW.getGreen() * 255 * (1.0 - p) + Color.ORANGE.getGreen() * 255 * p).toInt
+            val b = (Color.YELLOW.getBlue()  * 255 * (1.0 - p) + Color.ORANGE.getBlue()  * 255 * p).toInt
+            Color.rgb(r, g, b)
+        } else {
+            val p = ((wv - wmid) / wmid).toDouble
+            val r = (Color.ORANGE.getRed()   * 255 * (1.0 - p) + Color.RED.getRed()   * 255 * p).toInt
+            val g = (Color.ORANGE.getGreen() * 255 * (1.0 - p) + Color.RED.getGreen() * 255 * p).toInt
+            val b = (Color.ORANGE.getBlue()  * 255 * (1.0 - p) + Color.RED.getBlue()  * 255 * p).toInt
+            Color.rgb(r, g, b)
+        } // if
+        color
+    } // getColor
+
+} // HeatMapFX class
+
+object HeatMapFXTest extends App {
+  val x = new MatrixD((2,3), 0, 50, 100,
+                            70, 40, 20 )
+
+  val hmap = new HeatMapFX(x, null, 0, null)
+x
+} // HeatMapFXTest
+
+object HeatMapFXTest2 extends App {
+  val x = MatrixD ("../data/gene_expression.csv").slice (0, 1000)
+  val hmap = new HeatMapFX(x, null, 0, null)
+} // HeatMapFXTest2
