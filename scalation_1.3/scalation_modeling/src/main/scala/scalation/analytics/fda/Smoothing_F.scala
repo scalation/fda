@@ -15,6 +15,7 @@ package scalation.analytics.fda
 
 import scalation.analytics.RidgeRegression
 import scalation.linalgebra.{MatrixD, VectoD, VectorD}
+import scalation.math.FunctionS2S
 import scalation.plot.{FPlot, Plot}
 import scalation.util.Error
 
@@ -382,6 +383,7 @@ object Smoothing_FTest3 extends App
     val COEF_FILE = s"$time-data-smoothed-coef.csv"    
 
     val ord  = 4                            // b-spline order
+    val kMin = 5                            // maximum number of clusters
     val kMax = 6                            // maximum number of clusters
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -419,24 +421,27 @@ object Smoothing_FTest3 extends App
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     banner ("Smoothing...")
-    val gap    = 3
+    val gap    = 4
     val smooth = new MatrixD (sample.dim1, sample.dim2)
-    val coeffs = new MatrixD (sample.dim1, sample.dim2/gap + ord - 2)    // matrix for smoothing spline coefficients    
+    val coeffs = new MatrixD (sample.dim1, sample.dim2/gap + ord - 2)    // matrix for smoothing spline coefficients
+    val funcs  = Array.ofDim [FunctionS2S] (sample.dim1)
     for (i <- sample.range1) {
         val y     = sample(i)
         val moo   = new Smoothing_F (y, t, null, ord, SmoothingMethod.RIDGE, -1, gap) // smoother
         coeffs(i) = moo.train()
         smooth(i) = moo.predict (t)                     // predict for all time points
+        funcs(i)  = moo.predict
         //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
     } // for
 
     new PlotM (t, smooth, null, s"SMOOTHED", lines = true)
+    new FPlot (0.0 to 11 by 0.1, funcs.toSeq, lines = true)
     
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM CLUSTERING */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-    def clusterKMPP (data: MatrixD, k: Int, label: String, orig: MatrixD = null): KMeansPPClusterer =
+    def clusterKMPP (data: MatrixD, k: Int, label: String, orig: MatrixD = null, forig: Seq[FunctionS2S] = null): KMeansPPClusterer =
     {
         banner (s"K-Means++ Clustering: $label")
         println (s"k = $k")
@@ -450,11 +455,15 @@ object Smoothing_FTest3 extends App
             if (orig == null) clust(c) = MatrixD (for (i <- 0 until cls.size if cls(i) == c) yield data(i), false)
             else              clust(c) = MatrixD (for (i <- 0 until cls.size if cls(i) == c) yield orig(i), false)
             new PlotM (t, clust(c), _title = s"KM++: $label; c = $c; n = ${clust(c).dim1}", lines = true)
+            if (forig != null) {
+                val fclust = for (i <- 0 until cls.size if cls(i) == c) yield forig(i)
+                new FPlot (0.0 to 11 by 0.1, fclust.toSeq, s"KM++: $label; c = $c; n = ${clust(c).dim1}", true)
+            } // if
         } // for
         cl
     } // clusterKMPP
 
-    def clusterTight (data: MatrixD, kMin: Int, kMax: Int, label: String, orig: MatrixD = null): TightClusterer =
+    def clusterTight (data: MatrixD, kMin: Int, kMax: Int, label: String, orig: MatrixD = null, forig: Seq[FunctionS2S] = null): TightClusterer =
     {
         banner (s"Tight Clustering: $label")
         println (s"kMin = $kMin; kMax = $kMax")
@@ -465,7 +474,11 @@ object Smoothing_FTest3 extends App
         println (s"SSE = $sse; rSquared = $rs")
         for (set <- cls) {
             val clust = MatrixD (set.map(i => if (orig == null) data(i) else orig(i)).toSeq, false)
-            new PlotM (t, clust, _title = s"TC: $label; n = ${clust.dim1}", lines = true)            
+            new PlotM (t, clust, _title = s"TC: $label; n = ${clust.dim1}", lines = true)
+            if (forig != null) {
+                val fclust = for (i <- set) yield forig(i)
+                new FPlot (0.0 to 11 by 0.1, fclust.toSeq, s"TC: $label; n = ${clust.dim1}", true)
+            } // if
         } // for
         cl
     } // clusterTight
@@ -475,13 +488,13 @@ object Smoothing_FTest3 extends App
 
 //    println(s"new SSE = ${scl.sse (sample)}; rSquared = ${scl.rSquared (sample)}")
 
-    val ccl = clusterKMPP (coeffs, 6, "  COEFFS", smooth)
+    val ccl = clusterKMPP (coeffs, kMax, "  COEFFS", smooth, funcs)
 
 //    println(s"new SSE = ${ccl.sse (sample)}; rSquared = ${ccl.rSquared (sample)}")
 
 //    clusterTight (sample, 1, 6, "OBSERVED")
 //    clusterTight (smooth, 1, 6, "SMOOTHED")
-    clusterTight (coeffs, 1, 6, "  COEFFS", smooth)        
+    clusterTight (coeffs, kMin, kMax, "  COEFFS", smooth, funcs)        
 
 } // Smoothing_FTest3
 
@@ -513,3 +526,121 @@ object Smoothing_FTest4 extends App
     new Plot (t, y, z, lines = true)
 
 } // Smoothing_FTest4 object
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+/** The `Smoothing_FTest5` is used to test the `Smoothing_F` class.
+ *  > run-main scalation.analytics.fda.Smoothing_FTest5
+ */
+object Smoothing_FTest5 extends App
+{
+    import scalation.plot.PlotM
+    import scalation.analytics.clusterer.{GapStatistic, KMeansPPClusterer, TightClusterer}
+    import scalation.linalgebra.VectorD
+    import scalation.util.banner
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* LOAD DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    banner ("Loading observed data...")
+    val data   = MatrixD ("/Users/mepcotterell/Desktop/polyester/polyester/chr22_small_timecourse2.csv")  // observed data
+    val _0     = new VectorD (data.dim2)
+    var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > 100) yield data(i), false)
+
+    println (s" -    data.min = ${data.min()}; data.max = ${data.max()}")
+    println (s" -   data.dim1 = ${data.dim1}")
+    println (s" - nzdata.dim1 = ${nzdata.dim1}")
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PREPARE DATASET */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    val t      = VectorD.range (0, nzdata.dim2)
+    new PlotM (t, nzdata, null, s"OBSERVED", lines = true)
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM SMOOTHING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    banner ("Smoothing...")
+    val ord    = 4
+    val gap    = 2
+    val smooth = new MatrixD (nzdata.dim1, nzdata.dim2)
+    val coeffs = new MatrixD (nzdata.dim1, nzdata.dim2/gap + ord - 2)    // matrix for smoothing spline coefficients
+    val funcs  = Array.ofDim [FunctionS2S] (nzdata.dim1)
+    for (i <- nzdata.range1) {
+        val y     = nzdata(i)
+        val moo   = new Smoothing_F (y, t, null, ord, SmoothingMethod.RIDGE, -1, gap) // smoother
+        coeffs(i) = moo.train()
+        smooth(i) = moo.predict (t)                     // predict for all time points
+        funcs(i)  = moo.predict
+        //new Plot (t, y, z, s"Smoothing_F ord = $ord; λ = ${moo.getLambda}", lines = true)
+    } // for
+
+    //new PlotM (t, smooth, null, s"SMOOTHED", lines = true)
+    new FPlot (0.0 to 11 by 0.1, funcs.toSeq, lines = true)
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /* PERFORM CLUSTERING */
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    val kMin = 1
+    val kMax = 6
+
+    def clusterKMPP (data: MatrixD, k: Int, label: String, orig: MatrixD = null, forig: Seq[FunctionS2S] = null): KMeansPPClusterer =
+    {
+        banner (s"K-Means++ Clustering: $label")
+        println (s"k = $k")
+        val cl    = new KMeansPPClusterer (data, k)
+        val cls   = cl.cluster ()
+        val sse   = cl.sse ()
+        val rs    = cl.rSquared (data)
+        val clust = Array.ofDim [MatrixD] (k)        
+        println (s"SSE = $sse; rSquared = $rs")
+        for (c <- 0 until k) {
+            if (orig == null) clust(c) = MatrixD (for (i <- 0 until cls.size if cls(i) == c) yield data(i), false)
+            else              clust(c) = MatrixD (for (i <- 0 until cls.size if cls(i) == c) yield orig(i), false)
+            //new PlotM (t, clust(c), _title = s"KM++: $label; c = $c; n = ${clust(c).dim1}", lines = true)
+            if (forig != null) {
+                val fclust = for (i <- 0 until cls.size if cls(i) == c) yield forig(i)
+                new FPlot (0.0 to 11 by 0.1, fclust.toSeq, s"KM++: $label; c = $c; n = ${clust(c).dim1}", true)
+            } // if
+        } // for
+        cl
+    } // clusterKMPP
+
+    def clusterTight (data: MatrixD, kMin: Int, kMax: Int, label: String, orig: MatrixD = null, forig: Seq[FunctionS2S] = null): TightClusterer =
+    {
+        banner (s"Tight Clustering: $label")
+        println (s"kMin = $kMin; kMax = $kMax")
+        val cl    = new TightClusterer (data, kMax, kMin)
+        val cls   = cl.cluster ()
+        val sse   = 0.0 // cl.sse ()
+        val rs    = 0.0 // cl.rSquared (data)
+        println (s"SSE = $sse; rSquared = $rs")
+        for (set <- cls) {
+            val clust = MatrixD (set.map(i => if (orig == null) data(i) else orig(i)).toSeq, false)
+            //new PlotM (t, clust, _title = s"TC: $label; n = ${clust.dim1}", lines = true)
+            if (forig != null) {
+                val fclust = for (i <- set) yield forig(i)
+                new FPlot (0.0 to 11 by 0.1, fclust.toSeq, s"TC: $label; n = ${clust.dim1}", true)
+            } // if
+        } // for
+        cl
+    } // clusterTight
+
+//    val ocl = clusterKMPP (sample, 6, "OBSERVED")
+//    val scl = clusterKMPP (smooth, 6, "SMOOTHED")
+
+//    println(s"new SSE = ${scl.sse (sample)}; rSquared = ${scl.rSquared (sample)}")
+
+    val ccl = clusterKMPP (coeffs, kMax, "  COEFFS", smooth, funcs)
+
+//    println(s"new SSE = ${ccl.sse (sample)}; rSquared = ${ccl.rSquared (sample)}")
+
+//    clusterTight (sample, 1, 6, "OBSERVED")
+//    clusterTight (smooth, 1, 6, "SMOOTHED")
+    clusterTight (coeffs, kMin, kMax, "  COEFFS", smooth, funcs)        
+
+} // Smoothing_FTest5
