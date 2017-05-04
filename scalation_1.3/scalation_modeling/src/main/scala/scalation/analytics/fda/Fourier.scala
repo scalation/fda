@@ -98,33 +98,31 @@ object FourierTest extends App
     import scalation.plot.Plot
     new Plot (t, y, lines = true)
 
-    val k    = 8 
-    val L    = y.max () - y.min ()
-    val w    = 2.0 * Pi / L
-    val four = new Fourier (k, w) // 0.020282546792471)
-    val Φ    = four.phi (t)
-    val I    = MatrixD.eye (t.dim)
-    val λ    = 1.0E-10
-    val c    = ((Φ.t * Φ) + (I * λ)).inverse * Φ.t * y
+    val k    = 8                                       // 2k+1 terms in fourier expansion
+    val L    = y.max () - y.min ()                     // period length
+    val w    = 2.0 * Pi / L                            // fundamental frequency estimate
+    val four = new Fourier (k, w)                      // 
+    val Φ    = four.phi (t)                            // design matrix of basis functions
+    val I    = MatrixD.eye (t.dim)                     // identity matrix 
+    val λ    = 1.0E-10                                 // ridge parameter
+    val c    = ((Φ.t * Φ) + (I * λ)).inverse * Φ.t * y // model coefficients
 
-    def x (tt: Double): Double =
-    {
-        var sum = 0.0
-        for (j <- four.range) sum += c(j) * four (j, tt)
-        sum
-    } // predict
+    def x (tt: Double) = four.range.map(j => c(j) * four(j, tt)).sum
+//    {
+//        var sum = 0.0
+//        for (j <- four.range) sum += c(j) * four (j, tt)
+//        sum
+//    } // predict
 
-    val z    = VectorD (for (tt <- 0 until t.dim) yield x (tt))
-    val e    = y - z
-    val sse  = e dot e
+    val z    = t.map (x _)                             // predicted response
+    val e    = y - z                                   // residuals
+    val sse  = e dot e                                 // sum of squared errors
 
-    println (s"Φ = $Φ")
-    println (s"c = $c")
-    println (four)
-
-    import scalation.stat.vectorD2StatVector
-
-    for (i <- 1 until t.dim) println (y.acorr(i) / (2.0 * Pi))
+    println (s"   y = $y")    
+    println (s"   Φ = $Φ")
+    println (s"four = $four")
+    println (s"   c = $c")
+    println (s"   z = $z")
 
     new FPlot (1789.0 to 1991 by 1, Seq(x), lines = true)
 
