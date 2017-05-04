@@ -124,6 +124,6 @@ object FourierTest extends App
     println (s"   c = $c")
     println (s"   z = $z")
 
-    new FPlot (1789.0 to 1991 by 1, Seq(x), lines = true)
+    new FPlot (t(0) to t(t.dim-1) by 1, Seq(x), lines = true)
 
 } // FourierTest
