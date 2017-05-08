@@ -13,7 +13,9 @@ import java.io.PrintWriter
 
 import scala.io.Source.fromFile
 
-import scala.math.{abs => ABS, sqrt}
+import scala.util.Sorting.quickSort
+
+import scala.math.{abs => ABS, Ordering, sqrt}
 
 import scalation.math.{double_exp, oneIf}
 import scalation.math.ExtremeD.TOL
@@ -1149,6 +1151,12 @@ class MatrixD (d1: Int,
         } // for
         u.bsolve (y).asInstanceOf [VectorD]
     } // solve
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Sort 'This' Matrix In-place in ascending (non-decreasing) order 
+     *  according to a comparator.
+     */
+    def sort (ord: Ordering[Array[Double]]) { quickSort (v)(ord) }
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Solve for 'x' in the equation 'l*u*x = b' (see 'lud' above).

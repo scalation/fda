@@ -5,7 +5,6 @@
   *  @see     LICENSE (MIT style license file).
   */
 
-
 package scalation.plot
 
 import javafx.application.Application
@@ -21,7 +20,8 @@ import java.io.File
 
 import scalation.linalgebra.{VectoD, VectoI}
 import scalation.scala2d.{Panel, VizFrame}
-import scala.math.pow
+import scala.math.{Ordering, pow}
+import scala.util.Sorting
 
 import javafx.application.Application
 import javafx.event.{ActionEvent, EventHandler}
@@ -31,9 +31,9 @@ import javafx.scene.chart._
 import javafx.scene.paint.Color
 import javafx.stage.Stage
 import javafx.scene.control.{ToggleButton, ScrollPane}
-
 import javafx.scene.control.ScrollPane.ScrollBarPolicy
-import javafx.scene.layout.{Pane, HBox, VBox}
+import javafx.scene.layout.{HBox, VBox, FlowPane}
+import javafx.geometry.Orientation
 
 import scala.math._
 import scalation.linalgebra.{MatriD, VectoD}
@@ -42,72 +42,64 @@ import scalation.linalgebra.{MatrixD, VectorD}
 import scalation.scala2d.{Panel, VizFrame}
 import scala.math.pow
 
-
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `HeatMapFX` class takes 'x' and 'y' vectors of data values and plots the '(x, y)'
   *  data points. For more vertical vectors use `PlotM`.
-  *  @param x       the x matrix of data values (horizontal)
-  *  @param cl      the cl array of data values (primary vertical)
-  *  @param k       the k value of data values (secondary vertical) to compare with y
+  *  @param xx      the x matrix of data values where x(i) is the i-th vector
+  *  @param cl      the cl array of data values (horizontal)
+  *  @param k       the number of clusters in the data
   *  @param _title  the title of the plot
   */
-class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX")
+class HeatMapFX (x: MatrixD, cl: Array [Int], k: Int, _title: String = "HeatMapFX")
   extends VizFrame (_title, null) {
 
-    val WIDTH = 200
-    val HEIGHT = 10
-    val WAVE_LOW = 380.0
-    val WAVE_HIGH = 780.0
+    val xx    = if (cl != null) sorted () else x
+    val WIDTH = 600 / x.dim2 //200                                // constant for rectangle width
+    val HEIGHT = 1                                            // constant for rectangle hieght
+    val WAVE_LOW = 380.0                                      // constant for lower wavelength
+    val WAVE_HIGH = 780.0                                     // constant for higher wavelength
 
-    val min = x.min()
-    val max = x.max()
+    val min = xx.min()                                        // minimum value in matrix
+    val max = xx.max()                                        // maximum value in matrix
 
-    // creating canvas
-    val c = new CanvasFX(_title, 700, 600)
+    val c = new CanvasFX(_title, 700, 600)                    // canvas that holds everything
 
-    // creating the scene
-    val scene: Scene = new Scene(new Group())
-    val vbox: Pane = new Pane()
-    val hbox: HBox = new HBox()
-    hbox.setSpacing(10)
+    val scene: Scene = new Scene(new Group())                 // scene that everything is put into
+    val fpane: FlowPane = new FlowPane()                      // creating flow pane
+    val vbox: VBox   = new VBox()                             // VBox for styling
+    val hbox: HBox   = new HBox()                             // HBox for styling
+    hbox.setSpacing(10)                                       // styling HBox
+    fpane.setPrefWrapLength(WIDTH*xx.dim2)                     // styling for flow pane
 
-    // creating a scroll pane
-    val sp = new ScrollPane()
-    sp.setPrefSize(700, 578)
+    val sp = new ScrollPane()                                 // creating a scroll pane
+    sp.setPrefSize(700, 578)                                  // setting for size for scroll pane
 
+    var map = Array.ofDim[Rectangle](xx.dim1, xx.dim2)        // creating a mapping of recatngles
 
-    var map = Array.ofDim[Rectangle](x.dim1, x.dim2)
+    for (i <- xx.range1; j <- xx.range2) {          // looping over values
+      val r = new Rectangle()                                 // creating a rectangle
+      r.setWidth(WIDTH)                                       // setting width
+      r.setHeight(HEIGHT)                                     // setting height
 
-    for (i <- 0 until x.dim1; j <- 0 until x.dim2) {
+      r.setX(WIDTH*j)                                         // spacing out rectangles
+      r.setY(HEIGHT*i)                                        // spacing our rectangles
 
-      val r = new Rectangle()
-      r.setWidth(WIDTH)
-      r.setHeight(HEIGHT)
-      r.setX(WIDTH*j+j)
-      r.setY(HEIGHT*i+i)
-      val ci = wToRGB(linearInterp(x(i, j)))
-      r.setFill(ci)
+      val ci = wToRGB(linearInterp(xx(i, j)))                 // getting rectangle a color value
+      r.setFill(ci)                                           // setting color value
+      map(i)(j) = r                                           // adding rectangle to map
 
-      map(i)(j) = r
-
-      vbox.getChildren.addAll(r)
-
+      fpane.getChildren.addAll(r)                             // putting the rectangle in the flow pane
     } // for
 
-    // putting it all together
-    vbox.getChildren.addAll(hbox)
-    hbox.setPadding(new Insets(10, 10, 10, 50))
-
     // sizing the scroll bar
-    sp.setHbarPolicy(ScrollBarPolicy.AS_NEEDED)
-    sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED)
-    sp.setPannable(true)
-    sp.setFitToHeight(true)
+    sp.setHbarPolicy(ScrollBarPolicy.AS_NEEDED)               // adding horizontal bar when its needed
+    sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED)               // adding vertical bar when its needed
+    sp.setPannable(true)                                      // lets you pan along the scroll pane
+    sp.setFitToHeight(true)                                   // fits scroll pane to canvas size
 
-    // packing it up and sending it off
-    sp.setContent(vbox)
-    c.nodes.getChildren.addAll(sp)
-    c.show()
+    sp.setContent(fpane)                                      // adds flow pane to scroll pane
+    c.nodes.getChildren.addAll(sp)                            // add scroll pane to canvas
+    c.show()                                                  // display canvas
 
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   /** Linearally interpolates a plot of several 'v' vectors versus an 'x' vector.
@@ -117,7 +109,6 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
       val wavelength = ( (v-min)/(max-min) )  * (WAVE_HIGH - WAVE_LOW) + WAVE_LOW
       return wavelength
     } // linearInterp
-
 
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   /** Translates a plot of a 'w' vector versus an 'x' vector.
@@ -135,16 +126,14 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
       var g = 0.0
       var factor = 0.0
 
-
-      def adjust (color: Double, factor: Double): Int = {
+      def adjust (color: Double, factor: Double): Int = {      // adjusts color for dispaly
         val result = if (color == 0) 0
                      else math.round(INTENSITY_MAX * math.pow(color * factor, GAMMA))
 
         result.toInt
       }   //adjust
 
-
-      if (380 <= w && w < 440 ) {
+      if (380 <= w && w < 440 ) {                              // each level assigns a value for rgb based on w
         r = -(w - 440) / (440 - 380)
         g = 0
         b = 1
@@ -174,7 +163,6 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
         b = 0
       } // if
 
-
       if      (380 <= w && w <  420) factor = 0.3 + 0.7 * (w - 380) / (420 - 380)
       else if (420 <= w && w <  701) factor = 1
       else if (701 <= w && w <= 780) factor = 0.3 + 0.7 * (780 - w) / (780 - 700)
@@ -184,11 +172,21 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
       g = adjust(g, factor)
       b = adjust(b, factor)
 
-      Color.rgb(r.toInt, g.toInt, b.toInt)
-
+      Color.rgb(r.toInt, g.toInt, b.toInt)                     // assigns a color to recatangle based on its value
     } // wToXYZ
-} // HeatMapFX class
 
+   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+   /** Returns the matrix sorted according to cluster assignment.
+     */
+    def sorted (): MatrixD =
+    {
+        val clusters = cl.zipWithIndex
+        Sorting.quickSort (clusters)(Ordering.by[(Int, Int), Int](_._1))
+        val sort     = clusters.map(_._2)
+        MatrixD (for (i <- sort) yield x(i), false)
+    } // sorted
+
+} // HeatMapFX class
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `HeatMapFXTest` object is used to test the `HeatMapFXTest` class.
@@ -204,7 +202,6 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
 
   } // HeatMapFXTest
 
-
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `HeatMapFXTest2` object is used to test the `HeatMapFXTest2` class.
   */
@@ -218,7 +215,6 @@ class HeatMapFX (x: MatriD, cl: Array [Int], k: Int, _title: String = "HeatMapFX
     val hmap = new HeatMapFX(m, null, 0, null)
 
   } // HeatMapFXTest2
-
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `HeatMapFXTest3` object is used to test the `HeatMapFXTest3` class.

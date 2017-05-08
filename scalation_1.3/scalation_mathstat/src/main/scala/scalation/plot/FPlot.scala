@@ -70,9 +70,6 @@ class FCanvas (x: NumericRange[Double], fs: Seq[FunctionS2S], width: Int, height
     private val dot       = Ellipse ()
     private val axis      = Line ()
 
-    println (s"_x = ${_x}")
-    println (s"_y = ${_y}")
-
     setBackground (white)
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
