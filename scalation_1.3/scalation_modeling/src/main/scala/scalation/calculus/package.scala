@@ -18,7 +18,11 @@ import scalation.math.FunctionS2S
  *  operators in Functional Analysis.
  */
 package object calculus
-{ 
+{
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /**/
+    type Interval = (Double,Double)
+    
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Implicit conversion from 'FunctionS2S' to 'Hilbert', which supports 
      *  functional operators.
