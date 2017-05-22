@@ -290,8 +290,12 @@ class B_SplinePoly (ττ: VectorD, mMax: Int = 4)
                 //val splines2 = Array.ofDim[PiecewisePoly](splines.length-1)
                 for ( i <- 0 until splines(k-1).size ) {											// chose your spline
 		    if (DEBUG) println(s"spline number $i")
-		    val a = Poly( -τ(i)/(τ(i+k-1) - τ(i) + TOL) , 1 / ((τ(i+k-1) - τ(i) + TOL)))
-		    val b = Poly( τ(i+k)/(τ(i+k) - τ(i+1) + TOL) , -1 / ((τ(i+k) - τ(i+1) + TOL)))
+		    val denoma = if ( τ(i+k-1) - τ(i) == 0 ) τ(i+k-1) - τ(i) + TOL else τ(i+k-1) - τ(i)
+
+		    val denomb = if ( τ(i+k) - τ(i+1) == 0 ) τ(i+k) - τ(i+1) + TOL else τ(i+k) - τ(i+1)
+
+		    val a = Poly( -τ(i)/denoma , 1 / denoma) 
+		    val b = Poly( τ(i+k)/denomb , -1 / denomb )
 		    splines(k-1)(i) = splines(k-2)(i) * a + splines(k-2)(i+1) * b
 		    if (DEBUG) println(s"Spline $i of order $k : ${splines(k-2)(i)}")
                 } // for i
