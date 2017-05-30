@@ -906,6 +906,11 @@ class VectorD (val dim: Int,
     def swap (i: Int, j: Int) { val t = v(j); v(j) = v(i); v(i) = t }
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** The `signum` of this vector.
+     */
+    def signum: VectorD = VectorD (for (i <- range) yield math.signum (v(i)))
+
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Check whether 'this' vector is nonnegative (has no negative elements).
      */
     def isNonnegative: Boolean = { for (i <- range if v(i) < 0.0) return false; true }

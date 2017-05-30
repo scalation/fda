@@ -134,7 +134,7 @@ object Fac_QRTest extends App
     test ("a1", a1, new Fac_QR_H (a1))
     test ("a2", a2, new Fac_QR_H (a2))
     test ("a3", a3, new Fac_QR_H (a3))
-    test ("a4", a4, new Fac_QR_H (a4))
+p    test ("a4", a4, new Fac_QR_H (a4))
     test ("a5", a5, new Fac_QR_H (a5))
 
     println ("*" * 60)

@@ -158,6 +158,10 @@ class KMeansPPClusterer (x: MatrixD, k: Int, algo: Algorithm = HARTIGAN, s: Int 
                 } // if
             } // if
         } // for
+
+        // import scalation.plot.ClusterPlotFX
+        // val plot = new ClusterPlotFX (x, clustr, k)
+        
         done                                                     // return whether there was a change during this pass
     } // reassign
 
@@ -662,8 +666,9 @@ object KMeansPPClustererTest6
         val cl  = new KMeansPPClusterer (v, k, s = s)
         val cls = cl.cluster ()
         val sse = cl.sse ()
-        println ("sse = $sse")
         stat.tally (sse)
+        import scalation.plot.HeatMapFX
+        val hmap = new HeatMapFX(v, cls, k, "test")
     } // for
 
     println (Statistic.labels)

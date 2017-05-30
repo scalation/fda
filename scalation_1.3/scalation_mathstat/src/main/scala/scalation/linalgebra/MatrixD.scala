@@ -1277,6 +1277,18 @@ class MatrixD (d1: Int,
     } // inverse_npp
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    /** Invert 'this' matrix using QR decomposition.o
+     */
+    def inverse_qr: MatrixD =
+    {
+        import Fac_QR._
+        val qr = new Fac_QR_MGS (this)
+        val (q, r) = qr.factors
+        r.inverse.asInstanceOf[MatrixD] * q.t
+    } // inverse_qr
+
+    
+    //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /** Invert 'this' matrix (requires a square matrix) and use partial pivoting.
      */
     def inverse: MatrixD =
@@ -1950,3 +1962,100 @@ object MatrixDTest extends App with PackageInfo
 
 } // MatrixDTest object
 
+object MatrixDTest2 extends App
+{
+    val a = new MatrixD ((4, 4),
+        3, 1, 4,  8,
+        1, 4, 2,  4,
+        0, 6, 5, 10,
+        1, 3, 3,  5
+    )
+
+    /** Estimates the 1-norm of the given matrix (or its inverse) using an 
+     *  adapted version of Hager's algorithm. See Algorithm 2.1 in
+     *  `HIGHAM1998`.
+     *  @param a        the matrix
+     *  @param inverse  whether or not to compute for inverse (default false)
+     *  @author Michael Cotterell
+     *  @see Higham, N.J. "Fortran Codes for Estimating the One-Norm of a 
+     *       Real or Complex Matrix, with Applications to Condition Estimation."
+     *       ACM Trans. Math. Soft., 14, 1988, pp. 381-396. 
+     *  @see http://www.maths.manchester.ac.uk/~higham/narep/narep135.pdf
+     */
+    def norm1_1 (a: MatrixD, inverse: Boolean = false): Double =
+    {
+        val at = a.t
+        var x    = VectorD.one (a.dim2) / a.dim2 // x s.t. ||x||_1 = 1
+        var γ    = -1.0
+        var done = false
+        while (!done) {
+            val y    = if (inverse) a.solve (x) else a * x
+            val ξ    = y.signum // VectorD (for (i <- 0 until y.dim) yield math.signum (y(i)))
+            val z    = if (inverse) at.solve (ξ) else at * ξ
+            val zmax = z.abs.max ()
+            val ztx  = z dot x
+            println (s"y.norm1 = ${y.norm1} ; zmax = $zmax; ztx = $ztx; γ = $γ")
+            if (zmax.isNaN) {
+                γ    = Double.PositiveInfinity // y.norm1
+                done = true
+            } else if (zmax <= ztx) {
+                γ    = y.norm1
+                done = true
+            } else {
+                x    = new VectorD ((z.abs.argmax (), 1.0), a.dim2)
+            } // if
+        } // while
+        γ
+    } // norm1_1
+
+    /** Estimates the 1-norm of the given matrix (or its inverse) using an 
+     *  adapted version of Hager's algorithm. See Algorithm 4.1 in
+     *  `HIGHAM1998`.
+     *  @param a        the matrix
+     *  @param inverse  whether or not to compute for inverse (default false)
+     *  @author Michael Cotterell
+     *  @see Higham, N.J. "Fortran Codes for Estimating the One-Norm of a 
+     *       Real or Complex Matrix, with Applications to Condition Estimation."
+     *       ACM Trans. Math. Soft., 14, 1988, pp. 381-396. 
+     *  @see http://www.maths.manchester.ac.uk/~higham/narep/narep135.pdf
+     */
+    def norm1_2 (a: MatrixD, inverse: Boolean = false): Double =
+    {
+        val at = a.t
+        var e    = VectorD.one (a.dim2) / a.dim2
+        var v    = if (inverse) a.solve (e) else a * e // a * e
+        if (a.dim2 == 1) v.norm        
+        var γ    = v.norm1
+        var ξ    = v.signum
+        var x    = if (inverse) at.solve (ξ) else at * ξ // at * ξ
+        var k    = 2
+        var done = false
+        while (!done) {
+            var j = x.abs.argmax ()
+            e     = new VectorD ((j, 1.0), a.dim2)
+            v     = if (inverse) a.solve (e) else a * e // a * e
+            var g = γ
+            γ     = v.norm1
+            if ((v.signum == ξ) || (γ <= g)) {
+                for (i <- 0 until x.dim) x(i) = math.pow(-1, i+1) * (1.0 + ((i - 1.0) / (x.dim - 1)))
+                x = if (inverse) a.solve (x) else a * x // a * x
+                if (((2.0 * x.norm1) / (3.0 * x.dim)) > γ) {
+                    v = x
+                    γ = (2.0 * x.norm1) / (3.0 * x.dim)
+                } // if
+            } // if
+            ξ     = v.signum
+            x     = if (inverse) at.solve (ξ) else at * ξ // at * ξ
+            k     = k + 1
+            if ((x.sumAbs == x(j)) || (k > 5)) done = true
+        } // while
+        γ
+    } // norm1_2
+
+    println (s"   ||a||_1 = ${norm1_1 (a)}")
+    println (s"||a^-1||_1 = ${norm1_1 (a, true)}")    
+
+    println (s"   ||a||_1 = ${norm1_2 (a)}")
+    println (s"||a^-1||_1 = ${norm1_2 (a, true)}")    
+
+} // MatrixDTest2
