@@ -214,6 +214,29 @@ object GeneAnalysis extends App
 	} // if clusts(i)
     } // for i
 
+
+/*
+    val inFileName  = if (args(0) == null) "Drosophila.csv"     else args(0) 
+    val outFileName = if (args(1) == null) "DrosophilaClusters" else args(1)
+/*  val rowSum	    = if (args(2) == null) 100  // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
+    		      else args(2).toInt
+*/
+/*    
+    val kMax 	    = if (args(3) == null) 6
+    		      else args(3).toInt
+						// the maximum number of clusters to find
+    val kEst        = 6				// an estimated number of clusters to make when performing loose clustering
+    val useSVD	      	    = true 		// use singlular value decomposition during the GapStatistic process?
+    val clusterRawData      = true		// should we cluster the raw data (i.e. - unsmoothed) ? 
+    val clusterSmoothedData = true		// should we cluster the smoothed data? 
+    val clusterCoefficients = true		// should we cluster the coefficients
+    val clusterLoose	    = true		// should we cluster the data without resorting to tight clustering?
+    val clusterTight  	    = true		// should we tight cluster the data? 
+    val clusterGap	    = false		// should we cluster the data without resorting to tight clustering but using the Gap Statistic to find opt k?
+*/
+*/
+
+
 } // Smoothing_FTest6
 
 
@@ -236,50 +259,34 @@ object GeneAnalysis2 extends App
     /* SET PARMETERS */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-/*
-    val inFileName  = if (args(0) == null) "Drosophila.csv"     else args(0) // the name of the file with the data points
-    val outFileName = if (args(1) == null) "DrosophilaClusters" else args(1) // the name of the file to write output to, ex. name: "outFileName_LC_COEFFS.csv"
-*/
-    val inFileName    = args(0)
-    val outFileName   = args(1)
-    val rowSum        = args(2).toInt                   // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
-    val kMax 	      = args(3).toInt
-    val useSVD	      = if (args(4).toInt>0) true else false
-    val plots	      = if (args(5).toInt>0) true else false
-    val kEst	      = args(6).toInt
-    val alpha	      = args(7).toDouble
-    val beta	      = args(8).toDouble
-    val q	      = args(9).toInt
-    //val t             = args(10)
-    
-    val clusterRawData       = if (args(11).toInt>0) true else false
-    val clusterSmoothedData  = if (args(12).toInt>0) true else false
-    val clusterCoefficients  = if (args(13).toInt>0) true else false 
-    val clusterLoose         = if (args(14).toInt>0) true else false 
-    val clusterTight         = if (args(15).toInt>0) true else false 
-    val clusterGap           = if (args(16).toInt>0) true else false 
-    val gap    	    = 1				// to set the number of knots in the smoother (gap==1 => n many knots, gap==2 => n/2, etc.)
-    val ord   	    = 4				// the order for the B-Splines (order 4 => degree 3 polynomial B-Splines)
-    
-/*  val rowSum	    = if (args(2) == null) 100  // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
-    		      else args(2).toInt
-*/
+    for( i <- args.indices ) println(s"args($i): ${args(i)}")
 
-	
-    val kMin 	    = 1				// the minimum number of clusters to find
-/*    
-    val kMax 	    = if (args(3) == null) 6
-    		      else args(3).toInt
-						// the maximum number of clusters to find
-    val kEst        = 6				// an estimated number of clusters to make when performing loose clustering
-    val useSVD	      	    = true 		// use singlular value decomposition during the GapStatistic process?
-    val clusterRawData      = true		// should we cluster the raw data (i.e. - unsmoothed) ? 
-    val clusterSmoothedData = true		// should we cluster the smoothed data? 
-    val clusterCoefficients = true		// should we cluster the coefficients
-    val clusterLoose	    = true		// should we cluster the data without resorting to tight clustering?
-    val clusterTight  	    = true		// should we tight cluster the data? 
-    val clusterGap	    = false		// should we cluster the data without resorting to tight clustering but using the Gap Statistic to find opt k?
-*/
+    val inFileName    = args(0)					// the name of the file with the data points
+    val outFileName   = args(1)					// the name of the file to write output to, ex. name: "outFileName_LC_COEFFS.csv"
+    val rowSum        = args(2).toInt                   	// the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
+    val kMax 	      = args(3).toInt				// kMax for tight clustering
+    val useSVD	      = if (args(4).toInt>0) true else false	// useSVD for the gap clustering (default is yes)
+    val plots	      = if (args(5).toInt>0) true else false	// to display graphs of the raw, smoothed and clustered data (default is no)
+    val kEst	      = args(6).toInt	     	       		// the estimated number of clusters for the dataset
+    val alpha	      = args(7).toDouble			// the alpha threshold for tight clustering
+    val beta	      = args(8).toDouble			// the beta threshold for tight clustering
+    val q	      = args(9).toInt				// the number of top clubs to chose for tight clustering
+    val b             = args(10).toInt				// the target number of times to resample for tight clustering
+    
+    val clusterRawData       = if (args(11).toInt>0) true else false	// cluster the raw data
+    val clusterSmoothedData  = if (args(12).toInt>0) true else false	// cluster the smoothed data
+    val clusterCoefficients  = if (args(13).toInt>0) true else false 	// cluster the smoothed data according to coefficients
+    val clusterLoose         = if (args(14).toInt>0) true else false 	// cluster the data with normal (i.e. - loose) KMeansPP clustering
+    val clusterTight         = if (args(15).toInt>0) true else false 	// cluster the data with tight KMeansPP clustering
+    val clusterGap           = if (args(16).toInt>0) true else false 	// cluster the data using the gap statistic to find an optimal k (DEFAULT is OFF for a good reason...)
+
+    val ratio  = args(17).toDouble
+    val levels = args(18).toInt
+
+    val gap    	    = 1				// to set the number of knots in the smoother (gap==1 => n many knots, gap==2 => n/2, etc.)
+    val ord   	    = 4				// the order for the B-Splines (order 4 => degree 3 polynomial B-Splines)	
+    val kMin 	    = kEst				// the minimum number of clusters to find
+
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* LOAD, FILTER AND PREPARE DATASET */
@@ -386,7 +393,7 @@ object GeneAnalysis2 extends App
     {
         banner (s"Tight Clustering: $label")
         println (s"kMin = $kMin; kMax = $kMax")
-	val cl    = new TightClusterer (data, kMax, kMin)
+	val cl    = new TightClusterer (data, kMax, kMin,alpha=alpha,beta=beta,q=q,b=b,ratio=ratio,levels=levels)
         val cls   = cl.cluster ()
         for (set <- cls) {
             val fclust = for (i <- set) yield forig(i)

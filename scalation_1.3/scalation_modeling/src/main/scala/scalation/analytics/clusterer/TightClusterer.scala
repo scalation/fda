@@ -30,25 +30,23 @@ import Algorithm._
  *  @param s     the random number stream (to vary the clusters made)
  */
 //class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0)
-class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0, alpha: Double = 0.7, beta: Double = 0.9, q: Int = 7)
+class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0, alpha: Double = 0.7, beta: Double = 0.9, q: Int = 7, b: Int = 10, ratio: Double = 0.7, levels:Int = 3)
 //      extends Clusterer
 {
-
-    // q = top.can
-
-	//Move the val fields into the constructor, keep s as last param, default values for all
-
+        // NOTE q = top.can
+	//I think seq.num is levels?
+	
     private val DEBUG = false                                  // debug flag
-    private val ratio = 0.7                                   // subsampling ratio
+    //private val ratio = 0.7                                   // subsampling ratio
     //private val alpha = 0.2                                   // how far below 1 to set threshold
     private val thres = 1 - alpha                             // membership threshold for high scores
     //private val beta  = 0.9                                   // similarity threshold
-    private val b     = 10                                    // number of times to resample
+    //private val b     = 10                                    // number of times to resample
     //private val q     = 7                                     // number of candidates for each k
     private val n     = x.dim1                                // size of whole sample/population
     private val avail = Array.fill(x.dim1)(true)     	      // the not yet tightly clustered data points
 
-    private val levels   = 3                                          // number of levels to try
+    //private val levels   = 3                                          // number of levels to try
     private val clusters = new ArrayBuffer [Set [Int]] ()
     private val topClubs = Array.ofDim [ArrayBuffer [Set [Int]]] (levels)
 
@@ -121,29 +119,20 @@ class TightClusterer (x: MatrixD, k0: Int, kmin: Int, s: Int = 0, alpha: Double 
     } // createSubsample
 
     //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    /** Computet he mean comembership matrix by averaging results from several subsamples.
+    /** Computet the mean comembership matrix by averaging results from several subsamples.
      */
     def computeMeanComembership (k: Int, y: MatrixD): MatrixD =
     {
 	val unclustered = avail.count(_ == true)
-    	val nn	  = (unclustered * ratio).toInt 
-	//println(s"nn: $nn")
-        // val md      = new MatrixD (n, n)                           // mean comembership matrix
-
+    	val nn	  = (unclustered * ratio).toInt
 	val clustr2 = Array.ofDim[Int](n)			   // to hold the future clustering of our data classified by centroids of some subset sample clustering
                                                                    // val d = new MatrixD (n, n)                           // comembership matrix for current sample
         md.clear ()
-//        val y = new MatrixD(nn,x.dim2)
+	
         for (l <- 0 until b) {
             d.clear ()                                             // clear the comembreship matrix
             y.clear ()
-            //println (s"\n iteration l = $l")
             val imap = createSubsample (y)                // create a new subsample
-
-
-                //KMeansPPClusterer.permuteStreams ((s+l)%1000)
-                //val (kmc, clustr)  = KMeansPPClusterer (y, k)
-
 	    val kmc	  = new KMeansPPClusterer(y,k,s=(s+l)%1000)
             val clustr 	  = kmc.cluster ()                       // get the clusters
 	    val cents 	  = kmc.centroids()
