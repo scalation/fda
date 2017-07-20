@@ -34,7 +34,7 @@ object GeneAnalysis extends App
     val clusterLoose	    = true		// should we cluster the data without resorting to tight clustering?
     val clusterTight  	    = true		// should we tight cluster the data? 
     val clusterGap	    = false		// should we cluster the data without resorting to tight clustering but using the Gap Statistic to find opt k?
-    
+    val plots = true
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* LOAD, FILTER AND PREPARE DATASET */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -62,7 +62,7 @@ object GeneAnalysis extends App
     //println (s" - nzdata.dim1 = ${nzdata.dim1}")
     
     val t      = VectorD.range (0, nzdata.dim2)   
-    new PlotM (t, nzdata, null, s"OBSERVED", lines = true)
+    if (plots) new PlotM (t, nzdata, null, s"OBSERVED", lines = true)
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM SMOOTHING */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -83,7 +83,7 @@ object GeneAnalysis extends App
     
     val t0 = 0.0
     val tn = nzdata.dim2.asInstanceOf[Double]
-    new FPlot (t0 to tn by 0.1, funcs.toSeq, s"SmoothedData", lines = true)
+    if (plots) new FPlot (t0 to tn by 0.1, funcs.toSeq, s"SmoothedData", lines = true)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM CLUSTERING */
@@ -219,7 +219,7 @@ object GeneAnalysis extends App
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 /** The `GeneAnalysis2` is used to test the `Smoothing_F` class.
- *  > run-main apps.GeneAnalysis
+ *  > run-main apps.GeneAnalysis2
  */
 object GeneAnalysis2 extends App
 {
@@ -236,13 +236,41 @@ object GeneAnalysis2 extends App
     /* SET PARMETERS */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+/*
     val inFileName  = if (args(0) == null) "Drosophila.csv"     else args(0) // the name of the file with the data points
     val outFileName = if (args(1) == null) "DrosophilaClusters" else args(1) // the name of the file to write output to, ex. name: "outFileName_LC_COEFFS.csv"
+*/
+    val inFileName    = args(0)
+    val outFileName   = args(1)
+    val rowSum        = args(2).toInt                   // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
+    val kMax 	      = args(3).toInt
+    val useSVD	      = if (args(4).toInt>0) true else false
+    val plots	      = if (args(5).toInt>0) true else false
+    val kEst	      = args(6).toInt
+    val alpha	      = args(7).toDouble
+    val beta	      = args(8).toDouble
+    val q	      = args(9).toInt
+    //val t             = args(10)
+    
+    val clusterRawData       = if (args(11).toInt>0) true else false
+    val clusterSmoothedData  = if (args(12).toInt>0) true else false
+    val clusterCoefficients  = if (args(13).toInt>0) true else false 
+    val clusterLoose         = if (args(14).toInt>0) true else false 
+    val clusterTight         = if (args(15).toInt>0) true else false 
+    val clusterGap           = if (args(16).toInt>0) true else false 
     val gap    	    = 1				// to set the number of knots in the smoother (gap==1 => n many knots, gap==2 => n/2, etc.)
     val ord   	    = 4				// the order for the B-Splines (order 4 => degree 3 polynomial B-Splines)
-    val rowSum	    = if (args(2) == null) 100                  else args(2).toInt // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
+    
+/*  val rowSum	    = if (args(2) == null) 100  // the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
+    		      else args(2).toInt
+*/
+
+	
     val kMin 	    = 1				// the minimum number of clusters to find
-    val kMax 	    = if (args(3) == null) 6                    else args(3).toInt // the maximum number of clusters to find
+/*    
+    val kMax 	    = if (args(3) == null) 6
+    		      else args(3).toInt
+						// the maximum number of clusters to find
     val kEst        = 6				// an estimated number of clusters to make when performing loose clustering
     val useSVD	      	    = true 		// use singlular value decomposition during the GapStatistic process?
     val clusterRawData      = true		// should we cluster the raw data (i.e. - unsmoothed) ? 
@@ -251,7 +279,8 @@ object GeneAnalysis2 extends App
     val clusterLoose	    = true		// should we cluster the data without resorting to tight clustering?
     val clusterTight  	    = true		// should we tight cluster the data? 
     val clusterGap	    = false		// should we cluster the data without resorting to tight clustering but using the Gap Statistic to find opt k?
-    
+*/
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* LOAD, FILTER AND PREPARE DATASET */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -260,13 +289,18 @@ object GeneAnalysis2 extends App
     
     val taggedDataBuf  = ArrayBuffer.empty[       String]	// an array buffer for the names of the genes 
     val cleanedDataBuf = ArrayBuffer.empty[Array[Double]]	// an array buffer for the doubles parsed from the strings read in from the CSV 
-    val source 	       = io.Source.fromFile(inFileName)		// the source of the data 
+    val source 	       = io.Source.fromFile(inFileName)		// the source of the data
+    var m=0
     for( line <- source.getLines.drop(1) ){
     	 val cols  = line.split(",").map(_.trim)
 	 val clean = (for ( i <- 1 until cols.length ) yield cols(i).toDouble )
 	 if ( clean.sum > rowSum ) {
 	    cleanedDataBuf += clean.toArray
- 	    taggedDataBuf  += cols(0)
+	    /*val tag = if ( !(cols(0).equals("") || cols(0).equals("val"))) cols(0) else s"$m"
+ 	    taggedDataBuf  += tag
+	    */
+	    taggedDataBuf += s"$m"
+	    m+=1
 	 } // if
     }
     
@@ -279,7 +313,7 @@ object GeneAnalysis2 extends App
     //println (s" - nzdata.dim1 = ${nzdata.dim1}")
     
     val t      = VectorD.range (0, nzdata.dim2)   
-    new PlotM (t, nzdata, null, s"OBSERVED", lines = true)
+    if (plots) new PlotM (t, nzdata, null, s"OBSERVED", lines = true)
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM SMOOTHING */
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -300,7 +334,7 @@ object GeneAnalysis2 extends App
     
     val t0 = 0.0
     val tn = nzdata.dim2.asInstanceOf[Double]
-    new FPlot (t0 to tn by 0.1, funcs.toSeq, s"SmoothedData", lines = true)
+    if (plots) new FPlot (t0 to tn by 0.1, funcs.toSeq, s"SmoothedData", lines = true)
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     /* PERFORM CLUSTERING */
@@ -321,10 +355,10 @@ object GeneAnalysis2 extends App
         val sse   = cl.sse ()
         val rs    = cl.rSquared (data)
         println (s"SSE = $sse; rSquared = $rs")
-	for (c <- 0 until k) {
-            val fclust = for (i <- 0 until cls.size if cls(i) == c) yield forig(i)
+	//for (c <- 0 until k) {
+            //val fclust = for (i <- 0 until cls.size if cls(i) == c) yield forig(i)
             // new FPlot (t0 to tn by 0.1, fclust.toSeq, s"KM++: $label; c = $c; n = ${fclust.size}", true)
-        } // for
+        //} // for
         cls
     } // clusterKMPP
 
@@ -431,5 +465,7 @@ object GeneAnalysis2 extends App
 	} // if clusts(i)
     } // for i
 
+
+    println(s"GeneAnalysis application finished. Close any graph to terminate the application.")
 } // GeneAnalysisApp2
 

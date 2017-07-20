@@ -48,7 +48,7 @@ class MatrixD (d1: Int,
 
     if (v == null) {
         v = Array.ofDim [Double] (dim1, dim2)
-    } else if (dim1 != v.length || dim2 != v(0).length) {
+    }else if (dim1 > v.length || dim2 > v(0).length) {// else if (dim1 != v.length || dim2 != v(0).length) {
         flaw ("constructor", "dimensions are wrong")
     } // if
 

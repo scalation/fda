@@ -43,8 +43,8 @@ class MeanShiftClusterer (x: MatrixD, h: Double = 0.5, kernel: Kernel = GAUSSIAN
     protected val clustr   = Map [VectorD, Set [Int]] ()         // clusters
 
     val ker: (VectorD => Double) = kernel match {
-        //case GAUSSIAN => { v => math.exp (- v.normSq / (2 * h * h)) }
-        case GAUSSIAN => { v => math.exp (- v.normSq / (hxc)) }
+        case GAUSSIAN => { v => math.exp (- v.normSq / (2 * h * h)) }
+        //case GAUSSIAN => { v => math.exp (- v.normSq / (hxc)) }
         case FLAT     => { v => if (v.normSq <= h) 1.0 else 0.0 }
     } // ker
 
