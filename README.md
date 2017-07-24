@@ -33,7 +33,7 @@ Next, navigate to the /home/fda/scalation1_3/scalation_modeling directory with t
 
 The software is run through the bash script from this directory with the following command: 
 
-   >/home/fda/scalation_1_3/scalation_modeling$ ./gene_analysis.sh INFILE OUTFILE [OPTIONS]
+   >/home/fda/scalation_1_3/scalation_modeling$ ./gene_analysis.sh \<INFILE\> \<OUTFILE\> [OPTIONS]
 
 An INFILE and an OUTFILE argument must be provided. Please read further for instructions on the INFILE format as well as the various options you can pass. 
 
