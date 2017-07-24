@@ -1,31 +1,39 @@
 # fda
 Functional Data Analysis Group
 
-Dependencies: sbt, java8, bash shell (and with it getopts)
+Dependencies: git, sbt, java 8 jdk, bash shell (and with it getopts)
+
+First download the software:
+
+   >$ git clone --branch ftclust https://github.com/scalation/fda.git
 
 Place the software package in an appropriate directory, for instance:
 
    >/home/fda$
 
-If you downloaded the software package to your /Downloads/ directory you can also run the software directly from there: >/Downloads/fda$
+If you downloaded the software package to your /Downloads/ directory you can also run the software directly from there:
+
+   >/Downloads/fda$
 
 To run the software navigate to the scalation_mathstat directory with the following command:
 
    >/home/fda$ cd scalation_1.3/scalation_mathstat
-   >/home/fda/scalation1_3/scalation_mathstat$
+
+   >/home/fda/scalation_1_3/scalation_mathstat$
    
 From here type the following command:
 
-   >/home/fda/scalation1_3/scalation_mathstat$ sbt publishLocal
+   >/home/fda/scalation_1_3/scalation_mathstat$ sbt publishLocal
 
 Next, navigate to the /home/fda/scalation1_3/scalation_modeling directory with the following command:
 
-   >/home/fda/scalation1_3/scalation_mathstat$ cd../scalation_modeling
-   >/home/fda/scalation1_3/scalation_modeling$ 
+   >/home/fda/scalation_1_3/scalation_mathstat$ cd ../scalation_modeling
+
+   >/home/fda/scalation_1_3/scalation_modeling$ 
 
 The software is run through the bash script from this directory with the following command: 
 
-   >/home/fda/scalation1_3/scalation_modeling$ ./gene_analysis.sh <INFILE> <OUTFILE> [OPTIONS]
+   >/home/fda/scalation_1_3/scalation_modeling$ ./gene_analysis.sh INFILE OUTFILE [OPTIONS]
 
 An INFILE and an OUTFILE argument must be provided. Please read further for instructions on the INFILE format as well as the various options you can pass. 
 
@@ -36,10 +44,17 @@ The input file must have a header row labeling the observations (columns) as wel
 Both the header row and the leading label column may be left blank, but they must at least exist.
 In which case the leading label column is left blank, it will be filled in sequentially for purposes of the dataoutput files.
 
-The output files will be placed in a sibling directory to the directory containing the bash script: >/home/fda/scalation1_3/scalation_modeling/data/
+The output files will be placed in a sibling directory to the directory containing the bash script: 
+
+   >/home/fda/scalation1_3/scalation_modeling/data/
+
 Depending on your choice of options, there will be up to 9 output files. 
 
-Note the following options for running the software:
+As a simple example for illustrative purposes, you may run the provided simulated dataset, 'simu.csv', as follows:
+
+   >/home/fda/scalation_1.3/scalation/modeling$ ./gene_analysis.sh simu.csv simuOut -r \-10
+
+The following is a comprehensive list of options for running the software:
 
 	-r <OPTARG>
 		specify the row sum as OPTARG (for filtering the results). DEFAULT is 100. This filters out "housekeeping" or inconsequential samples
