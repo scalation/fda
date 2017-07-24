@@ -64,7 +64,7 @@ In which case the leading label column is left blank, it will be filled in seque
 The output files will be placed in a sibling directory to the directory containing the bash script: 
 
 ```bash
-$scalation1_3/scalation_modeling/data/
+scalation1_3/scalation_modeling/data/
 ```
 
 Depending on your choice of options, there will be up to 9 output files. 
@@ -82,42 +82,24 @@ As a simple example for illustrative purposes, you may run the provided simulate
 
 The following is a comprehensive list of options for running the software:
 
-	-r <OPTARG>
-		specify the row sum as OPTARG (for filtering the results). DEFAULT is 100. This filters out "housekeeping" or inconsequential samples
-		whose gene expression levels across all observations do not warrant scrutiny. NOTE that a negative number may be passed here as a
-		parameter, however you must use an escape sequence to pass it (i.e. - to pass -1 you must use \-1)
-	-m <OPTARG>
-		specify k-max as <OPTARG>, the starting point for k0 in the tight clustering algorithm. DEFAULT is 6
-	-s
-		do not to use SVD for Gap Statistic clustering. DEFAULT is to use SVD
-	-p
-		plot the data points raw and smoothed data. DEFAULT is not plots. 
-	-k <OPTARG>
-		specify k-est as as OPTARG, the estimated number of clusters to try to find in the data for Tight Clustering. DEFAULT is 1.  
-	-a <OPTARG>
-		specify the alpha level as OPTARG for Tight Clustering. DEFAULT is .2
-	-B <OPTARG>
-		specify the beta level as OPTARG for Tight Clustering. DEFAULT is .9
-	-q <OPTARG>
-		specify top-can as as OPTARG the number of top-candidates to chose for each k0 value for Tight Clustering. DEFAULT is 7 
-	-b <OPTARG>
-		specify resamp.num as as OPTARG the number of times to resample for Tight Clustering. resamp.num. DEFAULT is 10. 
-	-w
-		do not cluster the raw data. DEFAULT is to cluster raw data. 
-	-t
-		do not cluster smoothed data. DEFAULT is to cluster smoothed data. 
-	-c
-		do not cluster the data by coefficients. DEFAULT is to cluster by coefficients. 
-	-l
-		do not cluster the data with normal KMeans++ clustering (i.e.-non-tight or loose clustering). DEFAULT is to cluster loose. 
-	-g
-		do not cluster the data with tight clustering. DEFAULT is to cluster tight. 
-	-x
-		cluster the data using the Gap statistic. DEFAULT is to not cluster with the Gap statistic. BEWARE - Gap statistic runs in super exponential time.
-	-R <OPTARG>
-		specify samp.p as <OPTARG> the sample ratio for repeated subsamplings in Tight Clustering. DEFAULT is .7
-	-L <OPTARG>
-		specify resamp.num as <OPTARG> the number of sequential k0 to try to find tight and stable clusters. DEFAULT is 3
-	-h
-		ask for help. 
-	
+| Option | Description |
+| --- | --- |
+| `-r <OPTARG>` | Specify the row sum as `OPTARG` (for filtering the results). DEFAULT is 100. This filters out "housekeeping" or inconsequential samples whose gene expression levels across all observations do not warrant scrutiny. NOTE that a negative number may be passed here as a parameter, however you must use an escape sequence to pass it (i.e. - to pass -1 you must use -1). |
+| `-m <OPTARG>` | Specify k-max as `<OPTARG>`, the starting point for `k0` in the tight clustering algorithm. DEFAULT is `6`. |
+| `-s`          | Do not to use Singular Value Decomposition (SVD) for Gap Statistic clustering. DEFAULT is to use SVD. |
+| `-p`          | Generate plots for raw and smoothed data points. DEFAULT is to not generate plots. |
+| `-k <OPTARG>` | Specify k-est as as `OPTARG`, the estimated number of clusters to try to find in the data for Tight Clustering. DEFAULT is 1. |
+| `-a <OPTARG>` | Specify the alpha level as `OPTARG` for Tight Clustering. DEFAULT is `.2`. | 
+| `-B <OPTARG>` | Specify the beta level as `OPTARG` for Tight Clustering. DEFAULT is `.9`. |
+| `-q <OPTARG>` | Specify top-can as as `OPTARG` the number of top-candidates to chose for each `k0` value for Tight Clustering. DEFAULT is `7`. | 
+| `-b <OPTARG>` | Specify `resamp.num` as as `OPTARG` the number of times to resample for Tight Clustering. DEFAULT is `10`. |
+| `-w`          | Do not cluster the raw data. DEFAULT is to cluster raw data. |  
+| `-t`          | Do not cluster smoothed data. DEFAULT is to cluster smoothed data. |
+| `-c`          | Do not cluster the data by coefficients. DEFAULT is to cluster by coefficients. |
+| `-l`          | Do not cluster the data with normal k-means++ clustering (i.e., non-tight or loose clustering). DEFAULT is to cluster loose. | 
+| `-g`          | Do not cluster the data with tight clustering. DEFAULT is to cluster tight. |
+| `-x`          | Cluster the data using the Gap statistic. DEFAULT is to not cluster with the Gap statistic. BEWARE - Gap statistic runs in super exponential time. |
+| `-R <OPTARG>` | Specify `samp.p` as `<OPTARG>` the sample ratio for repeated subsamplings in Tight Clustering. DEFAULT is `.7`. |
+| `-L <OPTARG>` | Specify `resamp.num` as `<OPTARG>` the number of sequential `k0` to try to find tight and stable clusters. DEFAULT is `3`.
+| `-h`          | Ask for help. |
+
