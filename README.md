@@ -52,7 +52,7 @@ Depending on your choice of options, there will be up to 9 output files.
 
 As a simple example for illustrative purposes, you may run the provided simulated dataset, 'simu.csv', as follows:
 
-   >/home/fda/scalation_1.3/scalation/modeling$ ./gene_analysis.sh simu.csv simuOut -r \-10
+   >/home/fda/scalation_1.3/scalation/modeling$ ./gene_analysis.sh simu.csv simuOut -r \\-10
 
 The following is a comprehensive list of options for running the software:
 
