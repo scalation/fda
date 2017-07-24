@@ -1,58 +1,84 @@
-# fda
-Functional Data Analysis Group
+# `ftclust`
+Functional Tight Clustering
 
-Dependencies: git, sbt, java 8 jdk, bash shell (and with it getopts)
+Dependencies: `git`, `sbt`, `java >= 8`, `bash`
 
-First download the software:
+1. First download the software:
 
-   >$ git clone --branch ftclust https://github.com/scalation/fda.git
+   ```bash
+   $ git clone --branch ftclust https://github.com/scalation/fda.git
+   ```
 
-Place the software package in an appropriate directory, for instance:
+2. Place the software package in an appropriate directory, for instance:
 
-   >/home/fda$
+   ```bash
+   /home/fda$
+   ```
 
-If you downloaded the software package to your /Downloads/ directory you can also run the software directly from there:
+   If you downloaded the software package to your `/Downloads/` directory you can also run the software directly from there:
 
-   >/Downloads/fda$
+   ```bash
+   /Downloads/fda$
+   ```
 
-To run the software navigate to the scalation_mathstat directory with the following command:
+   **NOTE:** From this point forward, this directory will be abbreviated simply as `$` in the instructions.
 
-   >/home/fda$ cd scalation_1.3/scalation_mathstat
+3. **[PREPARING]** To prepare the software, navigate to the `scalation_mathstat` directory with the following command:
 
-   >/home/fda/scalation_1_3/scalation_mathstat$
+   ```bash
+   $ cd scalation_1.3/scalation_mathstat
+   ```
    
-From here type the following command:
+   From here type the following command:
 
-   >/home/fda/scalation_1_3/scalation_mathstat$ sbt publishLocal
+   ```bash
+   $ sbt publishLocal
+   ```
 
-Next, navigate to the /home/fda/scalation1_3/scalation_modeling directory with the following command:
+   Next, navigate to the `scalation1_3/scalation_modeling` directory with the following command:
 
-   >/home/fda/scalation_1_3/scalation_mathstat$ cd ../scalation_modeling
+   ```bash
+   $ cd ../scalation_modeling
+   ```
 
-   >/home/fda/scalation_1_3/scalation_modeling$ 
+4. **[RUNNING]** The software is run through the `bash` script from this directory with the following command: 
 
-The software is run through the bash script from this directory with the following command: 
+   ```bash
+   $ ./gene_analysis.sh <INFILE> <OUTFILE> [OPTIONS]
+   ```
 
-   >/home/fda/scalation_1_3/scalation_modeling$ ./gene_analysis.sh \<INFILE\> \<OUTFILE\> [OPTIONS]
+   An `INFILE` and an `OUTFILE` argument must be provided. Please read further for instructions on the `INFILE` format as well as the various options you can pass. 
 
-An INFILE and an OUTFILE argument must be provided. Please read further for instructions on the INFILE format as well as the various options you can pass. 
+## File Format
 
-The data you wish to cluster should be placed in a CSV file in the same directory as the gene_analysis.sh file. This is the INFILE.
-Each row of the input file should contain observation information about a single tissue sample.
-Each column of a row should be a separate observation for that particular tissue sample.
-The input file must have a header row labeling the observations (columns) as well as a leading column labeling the tissue samples (rows).
+The data you wish to cluster should be placed in a CSV file in the same directory as the `gene_analysis.sh` file. 
+This is the `INFILE`.
+Each row of the input file should contain observation information about a single sample.
+Each column of a row should be a separate observation for that particular sample.
+The input file must have a header row labeling the observations (columns) as well as a leading column labeling the samples (rows).
 Both the header row and the leading label column may be left blank, but they must at least exist.
 In which case the leading label column is left blank, it will be filled in sequentially for purposes of the dataoutput files.
 
+## Software Output
+
 The output files will be placed in a sibling directory to the directory containing the bash script: 
 
-   >/home/fda/scalation1_3/scalation_modeling/data/
+```bash
+$scalation1_3/scalation_modeling/data/
+```
 
 Depending on your choice of options, there will be up to 9 output files. 
 
-As a simple example for illustrative purposes, you may run the provided simulated dataset, 'simu.csv', as follows:
+## Example
 
-   >/home/fda/scalation_1.3/scalation/modeling$ ./gene_analysis.sh simu.csv simuOut -r \\-10
+As a simple example for illustrative purposes, you may run the provided simulated dataset, `simu.csv`, as follows:
+
+   ```bash
+   $ cd scalation_1.3/scalation/modeling
+   $ ./gene_analysis.sh simu.csv simuOut -r -10
+   ```
+
+## Software Options
 
 The following is a comprehensive list of options for running the software:
 
