@@ -76,7 +76,7 @@ Note the following options for running the software:
 	-R <OPTARG>
 		specify samp.p as <OPTARG> the sample ratio for repeated subsamplings in Tight Clustering. DEFAULT is .7
 	-L <OPTARG>
-		specify resamp.num as <OPTARG> the number of sequential k0 to try to find tight and stable clusters. DEFAULT is 3
+		specify seq	.num as <OPTARG> the number of sequential k0 to try to find tight and stable clusters. DEFAULT is 3
 	-h
 		ask for help. 
 	
