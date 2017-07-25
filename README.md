@@ -75,7 +75,7 @@ As a simple example for illustrative purposes, you may run the provided simulate
 
    ```bash
    $ cd scalation_1.3/scalation/modeling
-   $ ./gene_analysis.sh simu.csv simuOut -r -10
+   $ ./gene_analysis.sh simu.csv simuOut -r \-100
    ```
 
 ## Software Options
@@ -84,7 +84,7 @@ The following is a comprehensive list of options for running the software:
 
 | Option | Description |
 | --- | --- |
-| `-r <OPTARG>` | Specify the row sum as `OPTARG` (for filtering the results). DEFAULT is 100. This filters out "housekeeping" or inconsequential samples whose gene expression levels across all observations do not warrant scrutiny. NOTE that a negative number may be passed here as a parameter, however you must use an escape sequence to pass it (i.e. - to pass -1 you must use -1). |
+| `-r <OPTARG>` | Specify the row sum as `OPTARG` (for filtering the results). DEFAULT is 100. This filters out "housekeeping" or inconsequential samples whose gene expression levels across all observations do not warrant scrutiny. NOTE that a negative number may be passed here as a parameter, however you must use an escape sequence to pass it (i.e. - to pass -1 you must use \-1). |
 | `-m <OPTARG>` | Specify k-max as `<OPTARG>`, the starting point for `k0` in the tight clustering algorithm. DEFAULT is `6`. |
 | `-s`          | Do not to use Singular Value Decomposition (SVD) for Gap Statistic clustering. DEFAULT is to use SVD. |
 | `-p`          | Generate plots for raw and smoothed data points. DEFAULT is to not generate plots. |
