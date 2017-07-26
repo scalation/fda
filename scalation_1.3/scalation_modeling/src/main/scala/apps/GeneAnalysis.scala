@@ -43,16 +43,28 @@ object GeneAnalysis extends App
     
     val taggedDataBuf  = ArrayBuffer.empty[       String]	// an array buffer for the names of the genes 
     val cleanedDataBuf = ArrayBuffer.empty[Array[Double]]	// an array buffer for the doubles parsed from the strings read in from the CSV 
-    val source 	       = io.Source.fromFile(inFileName)		// the source of the data 
-    for( line <- source.getLines.drop(1) ){
+    val source 	       = io.Source.fromFile(inFileName)		// the source of the data
+    var x=0
+    var colNames : Array[String] = null
+    var domain : String = "SI"
+    val ar = source.getLines.toArray  
+    for( line <- source.getLines) {//.drop(1) ){
     	 val cols  = line.split(",").map(_.trim)
-	 val clean = (for ( i <- 1 until cols.length ) yield cols(i).toDouble )
-	 if ( clean.sum > rowSum ) {
-	    cleanedDataBuf += clean.toArray
- 	    taggedDataBuf  += cols(0)
-	 } // if
+	 if(x==0){
+	     colNames = cols
+	     for( i <- cols ) domain += "D"
+	 }
+	 else{
+	     val clean = (for ( i <- 1 until cols.length ) yield cols(i).toDouble )
+	     if ( clean.sum > rowSum ) {
+	     	cleanedDataBuf += clean.toArray
+ 	    	taggedDataBuf  += cols(0)
+	     } // if
+	 } // else
+	 x+=1
     }
-    
+   
+
     val nzdata = new MatrixD(cleanedDataBuf.toArray)
     
     //var nzdata = MatrixD (for (i <- data.range1 if data(i).sum > rowSum) yield data(i), false) // filter out the unimportant data
@@ -150,15 +162,18 @@ object GeneAnalysis extends App
     	for( i <- 0 until cls.size ){
 	     vecs += Vector[Any](taggedDataBuf(i), cls(i)) ++ cleanedDataBuf(i).toVector
 	}
+	val colName = Seq("gen_name","cluster_assignment") ++ colNames.toSeq
 	val clustRel = Relation( s"genes_${label}",
-		    	     	 Seq("gene_name",
+		    	     	 /*Seq("gene_name",
 				     "cluster_assignment",
 				     "em0-2hr"  ,"em2-4hr"  ,"em4-6hr"  ,"em6-8hr"  ,"em8-10hr" ,"em10-12hr",
 				     "em12-14hr","em14-16hr","em16-18hr","em18-20hr","em20-22hr","em22-24hr"
-				    ),
+				    )*/
+				 colName,
 				 vecs.toSeq,
 				 0,
-				 "SDDDDDDDDDDDD"
+				 //"SDDDDDDDDDDDD"
+				 domain
 			       ) 
 	clustRel.writeCSV(s"${outFileName}_${label}.csv")
     } // writeOutCluster
@@ -264,7 +279,8 @@ object GeneAnalysis2 extends App
     val inFileName    = args(0)					// the name of the file with the data points
     val outFileName   = args(1)					// the name of the file to write output to, ex. name: "outFileName_LC_COEFFS.csv"
     val rowSum        = args(2).toInt                   	// the filter threshold for important data (i.e. - minimum value for the sum of a row of a data)
-    val kMax 	      = args(3).toInt				// kMax for tight clustering
+    val kMax 	      = if(args(3).toInt<=args(6).toInt) args(6).toInt+5 	// kMax for tight clustering
+    		      	else args(3).toInt
     val useSVD	      = if (args(4).toInt>0) true else false	// useSVD for the gap clustering (default is yes)
     val plots	      = if (args(5).toInt>0) true else false	// to display graphs of the raw, smoothed and clustered data (default is no)
     val kEst	      = args(6).toInt	     	       		// the estimated number of clusters for the dataset
@@ -283,6 +299,8 @@ object GeneAnalysis2 extends App
     val ratio  = args(17).toDouble
     val levels = args(18).toInt
 
+
+
     val gap    	    = 1				// to set the number of knots in the smoother (gap==1 => n many knots, gap==2 => n/2, etc.)
     val ord   	    = 4				// the order for the B-Splines (order 4 => degree 3 polynomial B-Splines)	
     val kMin 	    = kEst				// the minimum number of clusters to find
@@ -298,18 +316,41 @@ object GeneAnalysis2 extends App
     val cleanedDataBuf = ArrayBuffer.empty[Array[Double]]	// an array buffer for the doubles parsed from the strings read in from the CSV 
     val source 	       = io.Source.fromFile(inFileName)		// the source of the data
     var m=0
-    for( line <- source.getLines.drop(1) ){
+    var x=0
+    var colNames : Array[String] = null
+    var domain : String = "SI"
+    for( line <- source.getLines) {//.drop(1) ){
+    	 val cols  = line.split(",").map(_.trim)
+	 if(x==0){
+	     for(c<-cols)println(s"from load, c: $c")
+	     colNames = cols.slice(1,cols.length)
+	     for( i <- cols ) domain += "D"
+	     println(s"from load, colNames: ${colNames.mkString}")
+	 }
+	 else{
+	     val clean = (for ( i <- 1 until cols.length ) yield cols(i).toDouble )
+	     if ( clean.sum > rowSum ) {
+	     	cleanedDataBuf += clean.toArray
+		val tag = if ( !(cols(0).equals("") || cols(0).equals("val"))) cols(0) else s"$x"
+ 	    	taggedDataBuf  += tag
+ 	    	//taggedDataBuf  += cols(0)
+	     } // if
+	 } // else
+	 x+=1
+	 
+    }
+    /*for( line <- source.getLines.drop(1) ){
     	 val cols  = line.split(",").map(_.trim)
 	 val clean = (for ( i <- 1 until cols.length ) yield cols(i).toDouble )
 	 if ( clean.sum > rowSum ) {
 	    cleanedDataBuf += clean.toArray
-	    /*val tag = if ( !(cols(0).equals("") || cols(0).equals("val"))) cols(0) else s"$m"
+	    val tag = if ( !(cols(0).equals("") || cols(0).equals("val"))) cols(0) else s"$m"
  	    taggedDataBuf  += tag
-	    */
-	    taggedDataBuf += s"$m"
+	    
+	    //taggedDataBuf += s"$m"
 	    m+=1
 	 } // if
-    }
+    }*/
     
     val nzdata = new MatrixD(cleanedDataBuf.toArray)
     
@@ -408,7 +449,22 @@ object GeneAnalysis2 extends App
     	for( i <- 0 until cls.size ){
 	     vecs += Vector[Any](taggedDataBuf(i), cls(i)) ++ cleanedDataBuf(i).toVector
 	}
-	val clustRel = Relation( s"genes_${label}",
+
+    val colName = Seq("gen_name","cluster_assignment") ++ colNames.toSeq
+    val clustRel = Relation( s"genes_${label}",
+		    	     	 /*Seq("gene_name",
+				     "cluster_assignment",
+				     "em0-2hr"  ,"em2-4hr"  ,"em4-6hr"  ,"em6-8hr"  ,"em8-10hr" ,"em10-12hr",
+				     "em12-14hr","em14-16hr","em16-18hr","em18-20hr","em20-22hr","em22-24hr"
+				    )*/
+			      colName,
+			      vecs.toSeq,
+			      0,
+			      //"SDDDDDDDDDDDD"
+			      domain
+			      )
+			       
+	/*val clustRel = Relation( s"genes_${label}",
 		    	     	 Seq("gene_name",
 				     "cluster_assignment",
 				     "em0-2hr"  ,"em2-4hr"  ,"em4-6hr"  ,"em6-8hr"  ,"em8-10hr" ,"em10-12hr",
@@ -417,7 +473,7 @@ object GeneAnalysis2 extends App
 				 vecs.toSeq,
 				 0,
 				 "SDDDDDDDDDDDD"
-			       ) 
+			       ) */
 	clustRel.writeCSV(s"${outFileName}_${label}.csv")
     } // writeOutCluster
 
@@ -433,15 +489,30 @@ object GeneAnalysis2 extends App
 		     seen += i
 		} // for
         } // for 
-	for( i <- cleanedDataBuf.toArray.indices if !seen.contains(i) ) vecs += Vector[Any](taggedDataBuf(i), -1) ++ cleanedDataBuf(i).toVector  
+	for( i <- cleanedDataBuf.toArray.indices if !seen.contains(i) ) vecs += Vector[Any](taggedDataBuf(i), -1) ++ cleanedDataBuf(i).toVector
+
+	println(s"colNames.toSeq : ${colNames.toSeq.mkString}")
+	val colName = Seq("gen_name","cluster_assignment") ++ colNames.toSeq
 	val clustRel = Relation( s"genes_${label}",
+		    	     	 /*Seq("gene_name",
+				     "cluster_assignment",
+				     "em0-2hr"  ,"em2-4hr"  ,"em4-6hr"  ,"em6-8hr"  ,"em8-10hr" ,"em10-12hr",
+				     "em12-14hr","em14-16hr","em16-18hr","em18-20hr","em20-22hr","em22-24hr"
+				    )*/
+				 colName,
+				 vecs.toSeq,
+				 0,
+				 //"SDDDDDDDDDDDD"
+				 domain
+			       ) 
+	/*val clustRel = Relation( s"genes_${label}",
 		    	     	 Seq("gene_name",
 				     "cluster_assignment",
 				     "em0-2hr"  ,"em2-4hr"  ,"em4-6hr"  ,"em6-8hr"  ,"em8-10hr" ,"em10-12hr",
 				     "em12-14hr","em14-16hr","em16-18hr","em18-20hr","em20-22hr","em22-24hr"),
 			         vecs.toSeq,
 			     	 0,
-			     	 "SDDDDDDDDDDDD")
+			     	 "SDDDDDDDDDDDD")*/
 	clustRel.writeCSV(s"${outFileName}_${label}.csv") 
     } // writeOutTightCluster
     
@@ -453,12 +524,12 @@ object GeneAnalysis2 extends App
     	if ( clusts(i) ) {
 	   if ( clusterGap ){
 	      println(s"Calculating gap statistic for ${labls(i)} data...")
-	      val cls = clusterGap (dats(i), kMax, labls(i), smooth, funcs)
+	      val cls = clusterGap (dats(i), kEst/*kMax*/, labls(i), smooth, funcs)
 	      writeOutCluster(cls,s"GSC_${labls(i)}")
 	      println(s"done.")
 	   }
 	   if ( clusterLoose ){
-	   	println(s" loose clustering ${labls(i)} data...")
+	   	println(s" loose clustering ${labls(i)} data..., kEst: $kEst")
 	   	val cls2 = clusterKMPP (dats(i), kEst, labls(i), smooth, funcs)
 	   	writeOutCluster(cls2, s"LC_${labls(i)}")
 	  	println(s"Done.")
